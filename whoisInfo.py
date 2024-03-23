@@ -179,7 +179,6 @@ def padding_handler(data:str) -> str:
 def to_json(data:str):
     data = CRLF_take_off(data)
     data = padding_handler(data)
-    print(data)
     # check weather data can be processed
     filter = ['Error', 'error', 'Not', 'not']
     for word in filter:
@@ -213,7 +212,7 @@ def to_json(data:str):
     final_json = re.sub(r',\s*$', '', final_json)
     final_json += '}\n'
     
-    print(final_json)
+    #print(final_json)
     final_json = json.loads(final_json)
     return final_json
 
@@ -227,8 +226,8 @@ def search_whois(url:str):
         data = content
     # data in json format
     data = to_json(data)
-    print(data)
+    #print(data)
     return data
 
-search_whois("breathcenter.com")
+#search_whois("breathcenter.com")
 #https://www.imeifoods.com.tw/

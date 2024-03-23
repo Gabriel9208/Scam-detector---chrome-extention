@@ -1,6 +1,5 @@
 import whoisInfo as whois
 import TLS_check as tls
-import json
 
 url = input("Enter url: ")
 whois_info = whois.search_whois(url)
