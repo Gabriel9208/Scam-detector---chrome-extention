@@ -16,7 +16,7 @@ def findUni(coName:str):
     firefoxOpt.add_argument("-headless")
 
     '''options=firefoxOpt'''
-    driver = webdriver.Firefox()
+    driver = webdriver.Firefox(options=firefoxOpt)
     driver.implicitly_wait(5)
     try:
         driver.get('https://www.google.com/')
@@ -24,7 +24,7 @@ def findUni(coName:str):
         searchBar.send_keys(f"{coName} 公司統編")
         searchBar.send_keys(Keys.ENTER)
         
-        # get link
+        # get links
         links = driver.find_elements(By.CLASS_NAME, 'yuRUbf')
         if not links:
             raise NoSuchElementException("Link search results not found.")

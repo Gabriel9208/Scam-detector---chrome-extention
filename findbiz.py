@@ -26,6 +26,7 @@ def findbiz(url:str):
             if r.text != '':
                 content = json.loads(r.text)
                 print(content)
+                #return content
                 break
     except requests.exceptions.ConnectionError as e:
         print('ConnectionError: ', e)
@@ -37,5 +38,7 @@ def findbiz(url:str):
         print(f'Unhandled Exception: {e}')
         return {}
 
-u = input("url: ")
-findbiz(u)
+# Just for testing
+# test = input("url: ")
+test = "https://www.nvidia.com/zh-tw/"
+findbiz(test)
