@@ -226,8 +226,8 @@ def search_whois(url:str):
         data = content
     # data in json format
     data = to_json(data)
-    #print(data)
+    print(data)
     return data
 
-#search_whois("breathcenter.com")
+#search_whois("https://www.nvidia.com/zh-tw/")
 #https://www.imeifoods.com.tw/

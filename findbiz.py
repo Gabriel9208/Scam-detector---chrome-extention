@@ -14,7 +14,7 @@ def findbiz(url:str):
     except ValueError as e: 
         print("ValueError:", e)
     except Exception as e: 
-        print(e)
+        print('Other exception:', e)
         
         
     apis = [f"https://data.gcis.nat.gov.tw/od/data/api/5F64D864-61CB-4D0D-8AD9-492047CC1EA6?$format=json&$filter=Business_Accounting_NO eq {uniNum}&$skip=0&$top=50", # 公司登記基本資料-應用一
@@ -25,9 +25,9 @@ def findbiz(url:str):
             r = requests.get(url)
             if r.text != '':
                 content = json.loads(r.text)
-                print(content)
-                #return content
-                break
+                #print(content)
+                return content
+                #break
     except requests.exceptions.ConnectionError as e:
         print('ConnectionError: ', e)
         return {}
@@ -40,5 +40,5 @@ def findbiz(url:str):
 
 # Just for testing
 # test = input("url: ")
-test = "https://www.nvidia.com/zh-tw/"
-findbiz(test)
+#test = "https://www.nvidia.com/zh-tw/"
+#findbiz(test)
