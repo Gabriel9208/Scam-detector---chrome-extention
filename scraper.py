@@ -1,10 +1,12 @@
+import asyncio
+import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import re
 from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import StaleElementReferenceException
 
 def match_regex(key:str, webElement):
+    print(f'Detacting {key}')
     re_rules = {
         'addr': {'縣市': re.compile(r'(.*\n)?.{2}(市|縣).+(號|號之\d+)(\d+樓|\d+樓之\d+)?'),}, 
         'tel': {'0800': re.compile(r'\b080(0|9)(-| |&nbsp;)*\d{3}(-| |&nbsp;)*\d{3}\b'),
@@ -17,13 +19,12 @@ def match_regex(key:str, webElement):
         'fax': {'fax': re.compile(r'(\(0\d\)|0\d)(-| |&nbsp;)*\d{4}(-| |&nbsp;)*\d{4}')},
         'num': {'num': re.compile(r'\d{8}'),},
         'mail': {'email': re.compile(r'[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}'),},
-        'company': {'公司': re.match(r'[^0-9 \n\ta-zA-Z><?!@#$%^&*"\'\\~`]+股份有限公司')},
+        'company': {'公司': re.compile(r'[^0-9 \n\ta-zA-Z><?!@#$%\^&*"\'\\~`]+股份有限公司')},
         'other': {},
     }
     
     match = None
-    
-    for regex in re_rules[key]:
+    for _, regex in re_rules[key].items():
         match_obj = regex.search(webElement.text)
         if match_obj:
             match = match_obj.group(0)
@@ -70,12 +71,12 @@ def extract_info(category: str, key: str, webElement):
         
     return result
     
-def scraper(url:str):
+async def scraper(url:str):
     firefoxOpt = Options()
-    #firefoxOpt.add_argument("-headless")
+    firefoxOpt.add_argument("-headless")
     '''options=firefoxOpt'''
     firefoxOpt.add_argument("user-agent=haha")
-    driver = webdriver.Firefox()
+    driver = webdriver.Firefox(options=firefoxOpt)
     
     if not re.match(r'https://|http://', url):
         raise('Scraper cannot handle url format')
@@ -96,30 +97,31 @@ def scraper(url:str):
     try:
         driver.get(url)
         
+        # list of footers and elements with 'footer' substring inside their class attribute 
         footers = [driver.find_elements(By.TAG_NAME, 'footer'),\
             driver.find_elements(By.XPATH, "//*[contains(@class, 'footer')]")]
         
         for index, footer_elements in enumerate(footers):
             if footer_elements:
                 # Prevent StaleElementReferenceException
-                footer_elements = driver.find_elements(By.TAG_NAME, 'footer') if index == 0 else \
-                                                driver.find_elements(By.XPATH, "//*[contains(@class, 'footer')]")
+                footer_elements = driver.find_element(By.TAG_NAME, 'footer') if index == 0 else \
+                                                driver.find_elements(By.XPATH, "//*[contains(@class, 'footer')]")[index - 1]
+                
                 for footer_el in footer_elements:
                     #find all elements under the footer_elementss of footer
                     inside_elements = footer_el.find_elements(By.XPATH, "//*")
                     
                     if inside_elements:
-                        for elmt in inside_elements:
-                            if elmt.tag_name != 'a':
-                                for category, keywords in keys.items():
+                        for category, keywords in keys.items():
+                            for elmt in inside_elements:
+                                if elmt.tag_name not in ['a', 'img', 'script']:
+                                    find = False
                                     for key in keywords:
-                                        find = False
                                         if key in elmt.text:
                                             find = True
                                             info[category] = extract_info(category, key, elmt)
                                             break
-                                        if find: 
-                                            break
+                                    if find: break
                             '''
                             else:
                                 for category, keywords in keys.items():
