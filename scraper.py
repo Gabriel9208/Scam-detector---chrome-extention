@@ -1,16 +1,17 @@
 import re
-import multiprocess
 import dill
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import StaleElementReferenceException
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 def match_regex(key:str, webElement, index:int, driver):
     #print(f'Detacting {key}')
     #print(webElement.text)
     re_rules = {
-        'addr': {'縣市': re.compile(r'(.*\n)?.{2}(市|縣).+(號|號之\d+)(\d+樓|\d+樓之\d+)?'),}, 
+        'addr': {'縣市': re.compile(r'(.*\n)?.{2}(市|縣).+[0-9] ?(號|號之\d+) ?(\d+ ?樓|\d+ ?樓之\d+){0,1}'),}, 
         'tel': {'0800': re.compile(r'\b080(0|9)(-| |&nbsp;)*\d{3}(-| |&nbsp;)*\d{3}\b'),
                 '2-4-4': re.compile(r'(\(0\d\)|0\d)(-| |&nbsp;)*\d{4}(-| |&nbsp;)*\d{4}'),
                 '2-3-4': re.compile(r'(\(0\d\)|0\d)(-| |&nbsp;)*\d{3}(-| |&nbsp;)*\d{4}'),
@@ -22,7 +23,7 @@ def match_regex(key:str, webElement, index:int, driver):
         'num': {'num': re.compile(r'\d{8}'),},
         'mail': {'email': re.compile(r'[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}'),},
         'company': {'公司': re.compile(r'[^0-9 \n\ta-zA-Z><?!@#$%\^&*"\'\\~`]+股份有限公司')},
-        'Food Business Registration No.': {'food': re.compile(r'[A-Z0-9-]')}
+        'Food Business Registration No.': {'food': re.compile(r'[A-Z]-\d{9,9}-\d{5,5}-\d')}
         #'other': {},
     }
     
@@ -83,33 +84,60 @@ def extract_info(category: str, key: str, webElement, index:int, driver):
         #        result = match_regex('other', webElement, index, driver)
         
     return result
-'''
-def iterate_webelement(webElement):
+
+keys = {
+            'addr': ['市', '縣'], 
+            'tel': ['客服', '專線', '電話', '市話', '專線'],
+            'phone': ['手機'],
+            'fax': ['傳真', 'fax', 'Fax'],
+            'num': ['統編', '統一編號'],
+            'mail': ['信箱', 'mail', 'email', '郵件'],
+            'company': ['股份有限公司', '營業人', '經營者'],
+            'Food Business Registration No.': ['食品業']
+            #'other': ['意見反映', '關於我們', '聯絡我們'],
+        }
+
+def process_footer_element(footer_elements, index, driver):
     info = {}
-    if webElement:
-        for category, keywords in keys.items():
-            for elmt in webElement:
-                if elmt.tag_name not in ['a', 'img', 'script']:
-                    find = False
+    if footer_elements:                
+        try:
+            #find all elements under the footer_elementss of footer        
+            if isinstance(footer_elements, list):
+                for category, keywords in keys.items():
+                    for elmt in footer_elements:
+                        print(elmt.text)
+                        find = False
+                        for key in keywords:
+                            if key in elmt.text:
+                                find = True
+                                retv = extract_info(category, key, elmt, index, driver)
+                                if retv:
+                                    info[category] = retv
+                                else:
+                                    info['null'] = 'NULL'
+                                break
+                        if find: break
+            else:
+                for category, keywords in keys.items():
                     for key in keywords:
-                        if key in elmt.text:
+                        if key in footer_elements.text:
                             find = True
-                            info[category] = extract_info(category, key, elmt)
+                            retv = extract_info(category, key, footer_elements, index, driver)
+                            if retv:
+                                info[category] = retv
+                            else:
+                                info['null'] = 'NULL'
                             break
-                    if find: break
+        except Exception as e:
+            print(e)
+            exit(1)
     else:
         print("Footer is empty.")
-        return None
+        info['null'] = 'NULL'
     
     return info
-'''
-def scraper(url:str):
-    firefoxOpt = Options()
-    firefoxOpt.add_argument("-headless")
-    '''options=firefoxOpt'''
-    #firefoxOpt.add_argument("user-agent=haha")
-    driver = webdriver.Firefox(options=firefoxOpt)
     
+def scraper(url:str, driver): 
     if not re.match(r'https://|http://', url):
         raise('Scraper cannot handle url format')
     
@@ -123,52 +151,17 @@ def scraper(url:str):
             driver.find_elements(By.XPATH, "//*[contains(@class, 'footer')]//*[text() and not(self::a)]")
 
         #footer_list = []
-        keys = {
-            'addr': ['市', '縣'], 
-            'tel': ['客服', '專線', '電話', '市話', '專線'],
-            'phone': ['手機'],
-            'fax': ['傳真', 'fax', 'Fax'],
-            'num': ['統編', '統一編號'],
-            'mail': ['信箱', 'mail', 'email', '郵件'],
-            'company': ['股份有限公司', '營業人', '經營者'],
-            'Food Business Registration No.': ['食品業']
-            #'other': ['意見反映', '關於我們', '聯絡我們'],
-        }
         
-        for index, footer_elements in enumerate(footers):
-            if footer_elements:                
-                #find all elements under the footer_elementss of footer        
-                if isinstance(footer_elements, list):
-                    for category, keywords in keys.items():
-                        for elmt in footer_elements:
-                            print(elmt.text)
-                            find = False
-                            for key in keywords:
-                                if key in elmt.text:
-                                    find = True
-                                    retv = extract_info(category, key, elmt, index, driver)
-                                    if retv:
-                                        info[category] = retv
-                                    break
-                            if find: break
-                else:
-                    for category, keywords in keys.items():
-                        for key in keywords:
-                            if key in footer_elements.text:
-                                find = True
-                                retv = extract_info(category, key, footer_elements, index, driver)
-                                if retv:
-                                    info[category] = retv
-                                break
-            else:
-                print("Footer is empty.")
-                return None
-        '''       
-        with multiprocess.Pool(processes=50) as pool:
-            results = pool.map(func=iterate_webelement, iterable=(footer_list,))
-        print(results)
-              '''  
+        with ThreadPoolExecutor(max_workers=len(footers)) as executor:
+                futures = [executor.submit(process_footer_element, footer, index, driver) 
+                        for index, footer in enumerate(footers)]
+                for future in as_completed(futures):
+                    element_info = future.result()
+                    info.update(element_info)
+
+        info.pop('null')
         return info
+
     except ConnectionAbortedError as e:
         print("Connection error in scraper: ", e)
     
@@ -177,16 +170,24 @@ def scraper(url:str):
         
     except Exception as e:
         print("Unknown error in scraper: ", e)
-        
-    finally:
-        driver.quit()
+   
 
-#matchList = scraper("https://www.momoshop.com.tw/main/Main.jsp") # momo 1min
-#matchList = scraper("https://www.gvm.com.tw/") # 遠見雜誌 43sec
-#matchList = scraper("https://www.cht.com.tw/home/consumer") # 中華電信 43sec
-#matchList = scraper("https://www.bnext.com.tw/") # 數位時代47sec
-matchList = scraper("https://www.nccc.com.tw/wps/wcm/connect/zh/home") # 財團法人聯合信用卡處理中心全球資訊網 30sec
-#matchList = scraper("https://www.104.com.tw/jobs/main/") # 104 30sec
-#matchList = scraper("https://www.591.com.tw/") # 591 86sec
+
+firefoxOpt = Options()
+firefoxOpt.add_argument("-headless")
+driver = webdriver.Firefox(options=firefoxOpt)
     
-print(matchList)
+matchList = None    
+try:
+    matchList = scraper("https://www.momoshop.com.tw/main/Main.jsp", driver) # momo 1min -> 40sec
+    #matchList = scraper("https://www.gvm.com.tw/", driver) # 遠見雜誌 43sec -> 29sec
+    #matchList = scraper("https://www.cht.com.tw/home/consumer", driver) # 中華電信 43sec -> 29sec
+    #matchList = scraper("https://www.bnext.com.tw/", driver) # 數位時代47sec -> 23sec
+    #matchList = scraper("https://www.nccc.com.tw/wps/wcm/connect/zh/home", driver) # 財團法人聯合信用卡處理中心全球資訊網 30sec -> 20sec
+    #matchList = scraper("https://www.104.com.tw/jobs/main/", driver) # 104 30sec -> 22sec
+    #matchList = scraper("https://www.591.com.tw/", driver) # 591 86sec -> 50sec
+    print(matchList)
+    
+finally:
+    if driver:
+        driver.quit()
