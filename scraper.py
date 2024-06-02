@@ -1,10 +1,8 @@
 import re
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
-from selenium.common.exceptions import StaleElementReferenceException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-                                                                                        #新北市新店區寶中路119之1號10樓
+
 re_rules = {
         'addr': {'縣市': re.compile(r'[^A-Za-z!@#$%^&*()_+1234567890=?/;:{}<>,.~`-]{2}(市|縣)[^A-Za-z!@#$%^&*()_+1234567890=?/;:{}<>,.~`-]+[0-9]{1,3} ?(號|號之\d+|之\d+號) ?(\d+ ?樓|\d+ ?樓之\d+){0,1}'),}, 
         'tel': {'0800': re.compile(r'\b080(0|9)(-| |&nbsp;)*\d{3}(-| |&nbsp;)*\d{3}\b'),
@@ -109,7 +107,6 @@ def process_footer_element(html: str, key_index):
         pass 
     
     matches = re.finditer(key, html)
-    #lines = html.splitlines()
 
     for match in matches:
         match_start_index = match.start()
@@ -134,33 +131,24 @@ def scraper(url:str, driver: webdriver):
         raise('Scraper cannot handle url format')
     
     info = {}
+    driver.get(url)
+    html = driver.page_source
+    start_index = html.find('footer')
     
-    try:
-        driver.get(url)
-        html = driver.page_source
-        
-        start_index = html.find('footer')
-        if start_index != -1:
-            footer = html[start_index:]
-        else:
-            print("No footer found!")
-            exit(1)
-    
-        with ThreadPoolExecutor(max_workers=18) as executor:
-                futures = [executor.submit(process_footer_element, footer, index) for index in range (18)]
-                for future in as_completed(futures):
-                    element_info = future.result()
-                    info.update(element_info)
+    if start_index != -1:
+        footer = html[start_index:]
+    else:
+        print("No footer found!")
+        exit(1)
 
-        if 'null' in info:
-            info.pop('null')
-        return info
-
-    except ConnectionAbortedError as e:
-        print("Connection error in scraper: ", e)
-    
-    except StaleElementReferenceException as e:
-        print("Stale element reference in scraper: ", e)
+    with ThreadPoolExecutor(max_workers=18) as executor:
+            futures = [executor.submit(process_footer_element, footer, index) for index in range (18)]
+            for future in as_completed(futures):
+                element_info = future.result()
+                info.update(element_info)
+    if 'null' in info:
+        info.pop('null')
+    return info
         
    
 start = time.time()
