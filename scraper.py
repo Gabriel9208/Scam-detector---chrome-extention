@@ -1,10 +1,10 @@
 import re
-import dill
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import StaleElementReferenceException
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 
 def match_regex(key:str, webElement, index:int, driver):
@@ -159,7 +159,8 @@ def scraper(url:str, driver):
                     element_info = future.result()
                     info.update(element_info)
 
-        info.pop('null')
+        if 'null' in info:
+            info.pop('null')
         return info
 
     except ConnectionAbortedError as e:
@@ -168,25 +169,25 @@ def scraper(url:str, driver):
     except StaleElementReferenceException as e:
         print("Stale element reference in scraper: ", e)
         
-    except Exception as e:
-        print("Unknown error in scraper: ", e)
    
-
-
+start = time.time()
 firefoxOpt = Options()
 firefoxOpt.add_argument("-headless")
 driver = webdriver.Firefox(options=firefoxOpt)
     
 matchList = None    
 try:
-    matchList = scraper("https://www.momoshop.com.tw/main/Main.jsp", driver) # momo 1min -> 40sec
+    #matchList = scraper("https://www.momoshop.com.tw/main/Main.jsp", driver) # momo 1min -> 40sec
     #matchList = scraper("https://www.gvm.com.tw/", driver) # 遠見雜誌 43sec -> 29sec
-    #matchList = scraper("https://www.cht.com.tw/home/consumer", driver) # 中華電信 43sec -> 29sec
+    matchList = scraper("https://www.cht.com.tw/home/consumer", driver) # 中華電信 43sec -> 29sec
     #matchList = scraper("https://www.bnext.com.tw/", driver) # 數位時代47sec -> 23sec
     #matchList = scraper("https://www.nccc.com.tw/wps/wcm/connect/zh/home", driver) # 財團法人聯合信用卡處理中心全球資訊網 30sec -> 20sec
     #matchList = scraper("https://www.104.com.tw/jobs/main/", driver) # 104 30sec -> 22sec
     #matchList = scraper("https://www.591.com.tw/", driver) # 591 86sec -> 50sec
     print(matchList)
+    end = time.time()
+    print("The time of execution of above program is :",
+      (end-start), "s")
     
 finally:
     if driver:
