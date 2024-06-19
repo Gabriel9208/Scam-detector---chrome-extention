@@ -164,7 +164,7 @@ try:
     #matchList = scraper("https://www.cht.com.tw/home/consumer", driver) # 中華電信 43sec -> 29sec -> 8
     #matchList = scraper("https://www.bnext.com.tw/", driver) # 數位時代47sec -> 23sec -> 6
     #matchList = scraper("https://www.nccc.com.tw/wps/wcm/connect/zh/home", driver) # 財團法人聯合信用卡處理中心全球資訊網 30sec -> 20sec -> 4
-    #matchList = scraper("https://www.104.com.tw/jobs/main/", driver) # 104 30sec -> 22sec -> 4
+    matchList = scraper("https://www.104.com.tw/jobs/main/", driver) # 104 30sec -> 22sec -> 4
     #matchList = scraper("https://www.591.com.tw/", driver) # 591 86sec -> 50sec -> 4
     print(matchList)
     end = time.time()
