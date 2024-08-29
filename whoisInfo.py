@@ -1,233 +1,147 @@
-import requests
 import socket
-from sys import exit
-import json
-import re
+from whois import whois
+from urllib.parse import urlparse
+from pprint import pprint
+#whois365
+#global whois
 
-def grab_domain(url:str) -> str:
-    # process start
-    match = re.search(r'^http(s?)://', url)
-    domain = ""
-    if match:
-        domain = url.split('/')[2]
-    else:
-        domain = url    
-    return domain
+def get_authoritative_whois_server(domain: str) -> tuple[str, str, str]:
+    """
+    Retrieves the authoritative whois server for a given domain.
 
-def first_level_search(query_domain:str) -> str:
-    # make GET request to whois_url
-    whois_url = "https://www.whois.com/whois"
-    req_url = whois_url + '/' + query_domain
-    try:
-        first_req = requests.get(req_url)
-    except requests.exceptions.RequestException as e:
-        print(e)
-        exit(1)
+    Args:
+        domain (str): The domain name to query.
 
-    # Extract whois content for later use
-    delete_head = first_req.text.find("Domain Name: ")
-    black_list = ["</div>", "</pre>", "&gt;&gt;"]
-    find_tail = [first_req.text[delete_head:].find(key) for key in black_list]
-    delete_tail = min([i + delete_head for i in find_tail if i != -1])
-    return_data = first_req.text[delete_head: delete_tail]
-    
-    # extracting whois_server and registrar from the response 
-    data = return_data.split('\n')
-    registrar_whois = None
-    new_domain = None
-    for line in data:
-        if "Registrar WHOIS Server: " in line:
-            if 'http' in line:
-                # Two kinds: "http://google.com" or "google.com"
-                registrar_whois = line[24:].split('/')[2] 
-            else:
-                registrar_whois = line[24:]
-        elif "Domain Name: " in line:
-            match = re.search(r'Domain Name: (.+)$', line)
-            if match:
-                new_domain = match.group(1)
-            else:
-                print("No Domain Name found.") 
-                exit(0)               
-            
-    if registrar_whois is None:
-        print("Domain:", query_domain, " registrar WHOIS server can not be found.")
-        print("Using https://www.whois.com/whois/imeifoods.com.tw: ")
-    else:
-        # take the ending '\n' off of the string to prevent '[Errno 11001] getaddrinfo failed'
-        registrar_whois = registrar_whois.strip()
-        #print(registrar_whois)
-    
-    return registrar_whois, new_domain, return_data
+    Returns:
+        tuple: A tuple containing the whois server provided by the registrar,
+            the domain name itself, and the raw text output from the WHOIS query.
 
-def second_level_search(registrar_whois:str, query_domain:str) -> str:
-    # create socket to communicate with the whois server
-    TCP_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    registrar_addr = (registrar_whois, 43)
-    try:
-        TCP_socket.connect(registrar_addr)
-        # query the target domain to the registrar whois server
-        query = query_domain + "\r\n"
-        TCP_socket.sendall(query.encode())
-        
-        # receive
-        resp = b''
-        while True:
-            rec = TCP_socket.recv(2048)
-            if not rec:
-                break
-            resp += rec
-        temp = resp.decode()
-        #print(temp)
-        
-    except Exception as e:
-        print("TCP connection failed", e)
-        exit(1)
+    Raises:
+        ValueError: If the registrar WHOIS server is not found.
+    """
+    raw_whois = whois(domain).text
 
-    TCP_socket.close()
-    
-    #filter the output
-    resp = str()
-    for line in temp:
-        if '>' in line:
+    registrar_whois_server = None
+    domain_name = None
+
+    for line in raw_whois.splitlines():
+        if "Registrar WHOIS Server" in line:
+            registrar_whois_server = line.split(":", 1)[1].strip()
+        if "Domain Name" in line:
+            domain_name = line.split(":", 1)[1].strip()
+        if registrar_whois_server and domain_name:
             break
-        resp += line
-        
-    return resp
-            
-# take \r\n in the response message off
-def CRLF_take_off(data:str) -> str:
-    buf = str()
-    for item in data.strip('\r\n').split('\r\n'):
-        buf += item + '\n'
-    return buf
 
-# turn a piece of data into JAON format
-def combine_json(title:str, data:str) -> str:
-    buffer = str()
-    counter = 0
-    if title == 'other':
-        for line in data.split('\n'):
-            if line.split(":")[0] == "":
-                buffer = re.sub(r',\s*$', '', buffer)
-                break
-            # key with no value
-            if len(line.split(":")) == 1:
-                buffer += f'"{line.split(":")[0].strip()}": "",\n'
-            else:
-                buffer += f'"{line.split(":")[0].strip()}": "{line.split(":")[1].strip()}",\n'
-        buffer += ',\n'
-    else:
-        buffer = f'"{title}": ' + '{\n'
+    pprint(raw_whois)
+
+    return registrar_whois_server, domain_name, raw_whois
+
+def query_whois_server(registrar_whois: str, query_domain: str) -> str:
+    """
+    Sends a WHOIS query to the specified registrar's WHOIS server and returns the response.
+
+    Args:
+        registrar_whois (str): The WHOIS server provided by the registrar.
+        query_domain (str): The domain name to query.
+
+    Returns:
+        str: The response from the WHOIS query.
+    """
+    response = b""
+    try:
+        with socket.create_connection((registrar_whois, 43)) as sock:
+            sock.sendall(f"{query_domain}\r\n".encode())
             
-        for line in data.split('\n'):
-            if line == "":
-                continue
-            if ':' not in line:
-                buffer += f'"{title}_{counter}": "{line}",\n'
-                counter += 1 
-            elif line.split(":")[0] == "":
-                buffer = re.sub(r',\s*$', '', buffer)
-                break
-            elif len(line.split(":")) == 1:
-                buffer += f'"{line.split(":")[0]}": "",\n'
-            else:
-                buffer += f'"{line.split(":")[0]}": "{line.split(":")[1].strip()}",\n'
+            while True:
+                received_data = sock.recv(2048)
                 
-        buffer = re.sub(r',\s*$', '', buffer)
-        buffer += '},\n'
-    
-    #print(buffer)
-    return buffer
-    
-    
-def padding_handler(data:str) -> str:
-    '''
-    remove padding:
-    
-    original format:
-        registrant:
-            aaa
+                if not received_data:
+                    break
+                
+                response += received_data
+    except Exception as e:
+        print(f"TCP connection failed: {e}")
+        raise SystemExit(1)
+
+    cleaned_response = response.decode().split(">", 1)[0]
+    return cleaned_response
             
-    turn into: 
-        registrant: aaa
-    '''
-    
-    pre = "" # previous line
-    for line in data.split('\n'):
-        if line == "":
-            continue
-        if '<' in line or '>' in line:
-            data = data.replace(line + '\n', "")
-            continue
-        if ":" in line and line.split(":")[1] != "":
-            pre = ""
-            continue
-        elif ":" in line and line.split(":")[1] == "":
-            pre = line
-            continue
-        elif pre != "" and ":" not in line:
-            index = data.find(pre + '\n' + line)
-            if index != -1:
-                data = data.replace(pre + '\n' + line, pre + line)
+def to_json(whois_data: str) -> dict:
+    """
+    Convert WHOIS data to a JSON object.
+
+    Args:
+        whois_data (str): The raw WHOIS data.
+
+    Returns:
+        dict: A JSON object containing the parsed WHOIS data.
+    """
+    whois_lines = whois_data.split('\n')
+    whois_dict = {}
+    current_key = None
+    current_value = None
+
+    for line in whois_lines:
+        if "Record expires on" in line or "Record created on" in line:
+            if current_key and current_value:
+                    whois_dict[current_key.strip()] = current_value.strip()
+                    
+            parts = line.split('on', 1)
+            current_key = parts[0].strip()
+            current_value = parts[1].strip()
+            
+            whois_dict[current_key.strip()] = current_value.strip()
+        elif ':' in line:
+            # If a new key is found, save the previous key-value pair
+            if current_key and current_value:
+                whois_dict[current_key.strip()] = current_value.strip()
+
+            parts = line.split(':', 1)
+            current_key = parts[0].strip()
+            current_value = parts[1].strip()
+        else:
+            # Check if the line contains any alphabetic characters
+            if any(char.isalpha() for char in line):
+                if current_value is not None:
+                    current_value += ' ' + line.strip()
             else:
-                data = data.replace(line, pre + line, 1)
-    #print(data)
-    return data
-    
-# hold the full process for converting data into JSON format
-def to_json(data:str):
-    data = CRLF_take_off(data)
-    data = padding_handler(data)
-    # check weather data can be processed
-    filter = ['Error', 'error', 'Not', 'not']
-    for word in filter:
-        if word in data:
-            return data
-    if data == '\n' or data == '' or data == ' ':
-        return data
-    
-    keyword = ['Registrar', 'Registrant', 'Admin', 'Tech', 'Name Server', 'other']
-    content = {'Registrar': "", 'Registrant': "", 'Admin': "", 'Tech': "", 'Name Server': "", 'other': ""}
-    
-    # package into different categories
-    for key in keyword:
-        for line in data.split('\n'):
-            if key in line:
-                if key == 'Name Server':
-                    content[key] += line.strip().split(':')[1].strip() + '\n'
-                else:
-                    add = line.strip()[len(key) + 1:].strip()
-                    if ':' not in add:
-                        content[key] += line.strip()[len(key) + 1:].strip() + '\n'
-                    else:
-                        content[key] += line.strip()[len(key) + 1:].strip() + '\n'
-                data = data.replace(line + '\n', "")
-    content['other'] = data
-    
-    # transform JSON-like format
-    final_json = '{\n'
-    for key in keyword:
-        final_json += combine_json(key, content[key])
-    final_json = re.sub(r',\s*$', '', final_json)
-    final_json += '}\n'
-    
-    #print(final_json)
-    final_json = json.loads(final_json)
-    return final_json
+                if current_key and current_value:
+                    whois_dict[current_key.strip()] = current_value.strip()
 
-def search_whois(url:str):
-    domain = grab_domain(url)
-    whois, domain, content = first_level_search(domain)
-    data = None
-    if whois:
-        data = second_level_search(whois, domain)
-    else: 
-        data = content
-    # data in json format
-    data = to_json(data)
-    print(data)
-    return data
+    # Save the last key-value pair
+    if current_key and current_value:
+        whois_dict[current_key.strip()] = current_value.strip()
 
-#search_whois("https://www.nvidia.com/zh-tw/")
-#https://www.imeifoods.com.tw/
+    return whois_dict
+    
+def search_whois(url: str) -> dict:
+    """
+    Searches WHOIS information for a given URL and returns the results in JSON format.
+
+    Args:
+        url (str): The URL to search WHOIS information for.
+
+    Returns:
+        dict: A dictionary containing the parsed WHOIS information.
+    """
+    domain = urlparse(url).netloc 
+    whois_server, domain_name, raw_whois = get_authoritative_whois_server(domain) 
+    whois_data = None
+
+    if whois_server:
+        whois_data = query_whois_server(whois_server, domain_name)
+    else:
+        whois_data = raw_whois
+
+    whois_json = to_json(whois_data)
+    
+    pprint(whois_json)
+    return whois_json
+
+#search_whois("https://www.momoshop.com.tw/main/Main.jsp")
+search_whois("https://www.gvm.com.tw/")
+'''
+whois server:
+    whois.gandi.net
+    
+'''
