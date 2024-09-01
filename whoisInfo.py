@@ -139,7 +139,7 @@ def search_whois(url: str) -> dict:
     return whois_json
 
 #search_whois("https://www.momoshop.com.tw/main/Main.jsp")
-search_whois("https://www.gvm.com.tw/")
+# search_whois("https://mfa.zyv.mybluehost.me/")
 '''
 whois server:
     whois.gandi.net

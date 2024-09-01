@@ -1,11 +1,12 @@
-import requests, json
+import requests, json, re
 from urllib.parse import urlparse, parse_qs
+from bs4 import BeautifulSoup
 
-def findUni(companyName:str):
+
+def findUniNum(companyName:str):
     if not companyName:
         raise ValueError("Company name cannot be empty. Maybe error parsing the url.")
     
-    uniNum = ""
     # Custom Search JSON API key: AIzaSyAfmXutFEOZMqhDzQpoCWfXL1ivLD90Jqs
     try:
         # Custom Search JSON API
@@ -34,6 +35,7 @@ def request_to_biz(uniNum):
     try:
         for url in apis:
             r = requests.get(url)
+            
             if r.text != '':
                 content = json.loads(r.text)
                 return content
@@ -50,31 +52,41 @@ def request_to_biz(uniNum):
 def findbiz(url:str, num=None):
     if num:
          return request_to_biz(num)
-    
-    name = urlparse(url).netloc.split('.')[::-1]
-    noUse = ['tw', 'org', 'com', 'net', 'edu', 'gov', 'mil', "aero", "biz", "coop", "info", "museum", "name", "pro", "moe", "me"]
-    
-    for n in name:
-        if n not in noUse:
-            name = n
-            break
-    
     try:
-        uniNum = findUni(name)
-        return request_to_biz(uniNum)
-    
-    except ValueError as e: 
-        print("ValueError:", e)
-        return {}
-    except Exception as e: 
-        print('Other exception:', e)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Referer': 'https://google.com',
+        }
+        
+        # get title of the page
+        page = requests.get(url, headers=headers)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        title_text = soup.title.string
+        
+        # split by Chinese characters, English characters and numbers
+        companyName = re.split(r'([^\u4e00-\u9fffa-zA-Z0-9]+)', title_text)[0]
+
+        try:
+            uniNum = findUniNum(companyName)
+            return request_to_biz(uniNum)[0]
+        
+        except ValueError as e: 
+            print("ValueError:", e)
+            return {}
+        except Exception as e: 
+            print('Other exception:', e)
+            return {}
+    except Exception as e:
+        print(e)
         return {}
 
+# print(findbiz("https://www.momoshop.com.tw/main/Main.jsp")) # momo 
+# print(findbiz("https://www.gvm.com.tw/")) # 遠見雜誌 
+# print(findbiz("https://www.cht.com.tw/home/consumer")) # 中華電信
+# print(findbiz("https://www.bnext.com.tw/")) # 數位時代
+# print(findbiz("https://www.nccc.com.tw/wps/wcm/connect/zh/home")) # 財團法人聯合信用卡處理中心全球資訊網 
+# print(findbiz("https://www.104.com.tw/jobs/main/")) # 104 
+# print(findbiz("https://www.591.com.tw/")) # 591
 
-'''
-start = time.time()
-print(findbiz("https://www.momoshop.com.tw/main/Main.jsp"))
-stop = time.time()
-print((stop-start) * 10 * 10 * 10)
-'''
-print(findbiz("https://www.esunbank.com/zh-tw/personal"))
+
