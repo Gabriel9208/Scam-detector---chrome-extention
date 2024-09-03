@@ -32,8 +32,6 @@ def get_authoritative_whois_server(domain: str) -> tuple[str, str, str]:
         if registrar_whois_server and domain_name:
             break
 
-    pprint(raw_whois)
-
     return registrar_whois_server, domain_name, raw_whois
 
 def query_whois_server(registrar_whois: str, query_domain: str) -> str:
@@ -135,7 +133,6 @@ def search_whois(url: str) -> dict:
 
     whois_json = to_json(whois_data)
     
-    pprint(whois_json)
     return whois_json
 
 #search_whois("https://www.momoshop.com.tw/main/Main.jsp")

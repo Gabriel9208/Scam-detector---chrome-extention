@@ -1,9 +1,8 @@
 from whoisInfo import search_whois
-from TLS_check import tls_cert
+from TLS_check import fetch_tls_cert
 from findbiz import findbiz
 from scraper import scraper
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 
 def classify(obj) -> str:
     if not obj:
@@ -11,9 +10,9 @@ def classify(obj) -> str:
     
     if 'subject' in obj:
         return 'tls'
-    elif 'Registrar' in obj:
+    elif 'Domain Name' in obj:
         return 'whois'
-    elif type(obj) == list:
+    elif "Business_Accounting_NO" in obj:
         return 'biz'
     else:
         return 'con'
@@ -33,19 +32,16 @@ html_back = '''</p>
 </html>'''
 
 in_url = input("Enter url: ")
-start = time.time()
 result = []
 
 with ThreadPoolExecutor(max_workers=4) as executor:
     futures = [executor.submit(findbiz, in_url), 
                executor.submit(scraper, in_url),
                executor.submit(search_whois, in_url), 
-               executor.submit(tls_cert, in_url),]
+               executor.submit(fetch_tls_cert, in_url),]
     
     for future in as_completed(futures):
         result.append(future.result())
-
-close = time.time()
 
 whois = None
 tls = None
@@ -59,12 +55,12 @@ for i in result:
         case 'biz': biz = i
         case 'con': con = i
 
-print(close - start)
-print(1)
-print(whois)
-print(2)
-print(tls)
-print(3)
-print(biz)
-print(4)
-print(con)
+whoisSection = ""
+tlsSection = ""
+biz = ""
+con = ""
+
+
+
+
+
