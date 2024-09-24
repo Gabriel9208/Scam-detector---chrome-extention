@@ -1,7 +1,7 @@
-from whoisInfo import searchWhois
-from TLS_check import fetchTlsCert
-from findbiz import findbiz
-from scraper import scraper
+from Data.whoisInfo import searchWhois, urlToDomain
+from Data.TLS_check import fetchTlsCert
+from Data.findbiz import findbiz
+from Data.scraper import scraper
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def classify(obj) -> str:
@@ -17,31 +17,8 @@ def classify(obj) -> str:
     else:
         return 'con'
 
-html_front = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-<p>
-'''
-html_back = '''</p>
-</body>
-</html>'''
-
 in_url = input("Enter url: ")
 result = []
-
-with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(findbiz, in_url), 
-               executor.submit(scraper, in_url),
-               executor.submit(searchWhois, in_url), 
-               executor.submit(fetchTlsCert, in_url),]
-    
-    for future in as_completed(futures):
-        result.append(future.result())
 
 whois = None
 tls = None
@@ -49,6 +26,23 @@ biz = None
 con = None
 
 
+with ThreadPoolExecutor(max_workers=4) as executor:
+    futures = [executor.submit(urlToDomain, in_url), 
+               executor.submit(scraper, in_url),
+               executor.submit(searchWhois, in_url), 
+               executor.submit(fetchTlsCert, in_url),]
+    
+    bizDomain = None
+    
+    for future in as_completed(futures):
+        if type(future.result()) is dict:
+            result.append(future.result())
+        else:
+            bizDomain = future.result()
+        
+    bizFuture = executor.submit(findbiz, bizDomain)
+    result.append(bizFuture.result())
+    
 for i in result:
     match classify(i):
         case 'whois': whois = i
@@ -83,12 +77,15 @@ Compare organization name and domain name in both whois and tls
 
 
 13 weeks:
-1. Backend setup / Backend logic
-2. Frontend setup / Frontend logic
-3. Integrate -- v1.0 (raw data)
-4. Implement 
-
-
+9/9-9/16: Backend setup / Backend logic(including simple data analyzing)
+9/16-9/23: Backend logic / Frontend layout 
+9/23-9/30: Integration and testing -- v1 (summarized information can be shown in browser) 
+9/30-10/7: Documentation -- v1
+10/7-10/14: Add feature: Implement Content Analysis
+10/14-10/21: Add feature: check if the site is already flagged -> Google Safe Browsing API / PhishTank API
+10/21-10/28: Add feature: Backlink Analysis (https://www.seoptimer.com/backlink-checker/ + selenium)
+10/28-11/4: Integration and testing / Documentation -- v2
+11/4-11/11: Prepare for presentation and poster design
 
 
 {
@@ -105,34 +102,26 @@ Compare organization name and domain name in both whois and tls
 }
 
 {
-    "subject": [
-        [["countryName", "TW"]],
-        [["stateOrProvinceName", "Taiwan"]],
-        [["localityName", "Taipei"]],
-        [["organizationName", "National Credit Card Center of R.O.C."]],
-        [["commonName", "www.nccc.com.tw"]]
+    'subject': [
+        ('countryName', 'TW'),
+        ('stateOrProvinceName', 'Taiwan'),
+        ('localityName', 'Taipei'),
+        ('organizationName', 'National Credit Card Center of R.O.C.'),
+        ('commonName', 'www.nccc.com.tw')
     ],
-    "issuer": [
-        [["countryName", "TW"]],
-        [["organizationName", "TAIWAN-CA"]],
-        [["commonName", "TWCA Secure SSL Certification Authority"]]
+    'issuer': [
+        ('countryName', 'TW'),
+        ('organizationName', 'TAIWAN-CA'),
+        ('commonName', 'TWCA Secure SSL Certification Authority')
     ],
-    "version": 3,
-    "serialNumber": "47E800000007228F35337AC90ED23D36",
-    "notBefore": "Mar 31 22:59:32 2024 GMT",
-    "notAfter": "May  1 15:59:59 2025 GMT",
-    "subjectAltName": [
-        ["DNS", "www.nccc.com.tw"]
-    ],
-    "OCSP": [
-        "http://twcasslocsp.twca.com.tw/"
-    ],
-    "caIssuers": [
-        "http://sslserver.twca.com.tw/cacert/secure_sha2_2023G3.crt"
-    ],
-    "crlDistributionPoints": [
-        "http://sslserver.twca.com.tw/sslserver/Securessl_revoke_sha2_2023G3.crl"
-    ]
+    'version': 3,
+    'serialNumber': '47E800000007228F35337AC90ED23D36',
+    'notBefore': 'Mar 31 22:59:32 2024 GMT',
+    'notAfter': 'May  1 15:59:59 2025 GMT',
+    'subjectAltName': [('DNS', 'www.nccc.com.tw')],
+    'OCSP': ['http://twcasslocsp.twca.com.tw/'],
+    'caIssuers': ['http://sslserver.twca.com.tw/cacert/secure_sha2_2023G3.crt'],
+    'crlDistributionPoints': ['http://sslserver.twca.com.tw/sslserver/Securessl_revoke_sha2_2023G3.crl']
 }
 None
 {'tel': '0800-058-085', 'addr': '臺北市松山區復興北路363號4樓'}

@@ -131,7 +131,10 @@ def scraper(url:str):
     try:
         # driver settings -> do not load images and use headless mode
         chromeOpt = webdriver.ChromeOptions()
-        chromeOpt.add_argument("-headless")
+        chromeOpt.add_argument("--headless")
+        chromeOpt.add_argument("--disable-gpu")
+        chromeOpt.add_argument("--no-sandbox")
+        chromeOpt.add_argument("--disable-dev-shm-usage")
         chromeOpt.add_argument('--blink-settings=imagesEnabled=false')
         
         driver = webdriver.Chrome(options=chromeOpt)
@@ -196,3 +199,6 @@ def scraper(url:str):
     
 # except Exception as e:
 #     pass
+
+if __name__ == "__main__":
+    print(scraper("https://shopee.tw/buyer/login?next=https%3A%2F%2Fshopee.tw%2F%3Fgad_source%3D1%26gclid%3DCj0KCQjwxsm3BhDrARIsAMtVz6OFhn-JzKCjJZtwlCLrJU7rnN1NufSfvzzZ-8ALkUfezMwYqHbvUaEaApX9EALw_wcB"))
