@@ -4,6 +4,18 @@ from urllib.parse import urlparse
 #whois365
 #global whois
 
+def urlToDomain(url: str) -> str:
+    subDomain = urlparse(url).netloc
+    rawWhois = whois.whois(subDomain).text
+    domainName = None
+
+    for line in rawWhois.splitlines():
+        if "Domain Name" in line:
+            domainName = line.split(":", 1)[1].strip()
+            break
+
+    return domainName
+
 def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
     """
     Retrieves the authoritative whois server for a given domain.
@@ -122,6 +134,7 @@ def searchWhois(url: str) -> dict:
         dict: A dictionary containing the parsed WHOIS information.
     """
     domain = urlparse(url).netloc 
+    
     whoisServer, domainName, rawWhois = getAuthoritativeWhoisServer(domain) 
     whoisData = None
 
