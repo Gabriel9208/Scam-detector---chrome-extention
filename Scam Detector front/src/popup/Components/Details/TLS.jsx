@@ -1,51 +1,8 @@
-import { useState, useEffect, useContext, useCallback } from 'react'
+import { useContext } from 'react'
 import { GlobalContext } from '../../Popup.jsx'
 
-import axios from 'axios';
-
-export const TLS = ({ url }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const { setTlsInfo } = useContext(GlobalContext);
-
-    const fetchTLSData = useCallback(async () => {
-        if (!url) return;
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await axios.post('http://localhost:8000/scam-detector/detail/tls/', {
-                url: url,
-            }, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const decodedData = Object.fromEntries(
-                Object.entries(response.data).map(([key, value]) => [
-                    key,
-                    typeof value === 'string' ? decodeURIComponent(JSON.parse(`"${value}"`)) : value
-                ])
-            );
-            console.log("tls decodedData: ", decodedData);
-            setTlsInfo(decodedData);
-        }
-        catch (err) {
-            setError(err.message);
-            setTlsInfo(null);
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [url]);
-
-    useEffect(() => {
-        fetchTLSData();
-    }, [fetchTLSData]);
-
-    const { tlsInfo } = useContext(GlobalContext);
+export const TLS = () => {
+    const { tlsInfo, loading, error } = useContext(GlobalContext);
 
     return (
         <div>

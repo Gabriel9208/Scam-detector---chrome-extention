@@ -1,52 +1,8 @@
-import { useState, useEffect, useContext, useCallback } from 'react'
+import { useContext } from 'react'
 import { GlobalContext } from '../../Popup.jsx'
 
-import axios from 'axios';
-
-export const Business = ({url}) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const { setBusinessInfo, tlsInfo, businessInfo } = useContext(GlobalContext);
-
-    const fetchBusinessData = useCallback(async () => { 
-            if (!url) return;
-
-            setLoading(true);
-            setError(null);
-            console.log("orgName: ", tlsInfo.subject.Organization);
-
-            try {                
-                const response = await axios.post('http://localhost:8000/scam-detector/detail/findbiz/', {
-                    url: url,
-                    organizationName: tlsInfo.subject.Organization,
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                const decodedData = Object.fromEntries(
-                Object.entries(response.data).map(([key, value]) => [
-                    key,
-                    typeof value === 'string' ? decodeURIComponent(JSON.parse(`"${value}"`)) : value
-                    ])
-                ); 
-                setBusinessInfo(decodedData);
-            } 
-            catch (err) {
-                setError(err.message);
-                setBusinessInfo(null);
-            } 
-            finally {
-                setLoading(false);
-            }
-    }, [url, tlsInfo]);
-
-    useEffect(() => {
-        if (tlsInfo) {
-            fetchBusinessData();
-        }
-    }, [fetchBusinessData, tlsInfo]);
+export const Business = () => {
+    const { businessInfo, loading, error } = useContext(GlobalContext);
 
     return (
         <div>

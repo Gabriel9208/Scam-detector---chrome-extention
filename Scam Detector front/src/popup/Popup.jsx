@@ -17,6 +17,8 @@ const GlobalProvider = ({ children }) => {
   const [businessInfo, setBusinessInfo] = useState(null);
   const [pageInfo, setPageInfo] = useState(null);
   const [riskScore, setRiskScore] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const contextValue = useMemo(() => ({
     whoisInfo,
@@ -28,8 +30,12 @@ const GlobalProvider = ({ children }) => {
     pageInfo,
     setPageInfo,
     riskScore,
-    setRiskScore
-  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore]);
+    setRiskScore,
+    loading,
+    setLoading,
+    error,
+    setError
+  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error]);
 
   return (
     <GlobalContext.Provider value={contextValue}>
@@ -76,7 +82,7 @@ export const Popup = () => {
         <button onClick={() => setSubmitUrl(url)}>Analyze</button>
       </div>
       {submitUrl && (
-        <div className='result-container'>
+        <div className='content-container'>
           <GlobalProvider>
             <Result />
             <Analysis />

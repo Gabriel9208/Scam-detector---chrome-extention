@@ -48,5 +48,8 @@ export default defineManifest({
   ],
   chrome_url_overrides: {
     newtab: 'newtab.html',
+  },
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self'"
   }
 })
