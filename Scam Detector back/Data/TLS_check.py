@@ -3,29 +3,46 @@ from requests.exceptions import RequestException
 from urllib3.exceptions import InsecureRequestWarning
 import ssl
 import OpenSSL
+import logging
 from datetime import datetime
 
 # Suppress only the single warning from urllib3 needed.
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 def fetchTlsCert(url: str) -> dict:
-    """
-    Fetches the TLS certificate for a given URL using requests library.
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+    }
 
-    Args:
-        url (str): The URL to fetch the TLS certificate for.
-
-    Returns:
-        dict: The TLS certificate information as a dictionary.
-
-    Raises:
-        Exception: If there is an error fetching or parsing the certificate.
-    """
     try:
-        response = requests.get(url, verify=False, timeout=10)
-        cert = ssl.get_server_certificate((response.url.split('//')[1].split('/')[0], 443))
-        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        logging.info(f"TLS: Fetching TLS certificate for URL: {url}")
+        
+        # Try with requests first
+        try:
+            response = requests.get(url, headers=headers, verify=False, timeout=10)
+            response.raise_for_status()
+            logging.info(f"TLS: Response status code: {response.status_code}")
+            hostname = response.url.split('//')[1].split('/')[0]
+        except RequestException as req_err:
+            logging.warning(f"Request failed, falling back to direct SSL: {req_err}")
+            hostname = url.split('//')[1].split('/')[0]
 
+        # Fallback to direct SSL connection if requests fails
+        cert = ssl.get_server_certificate((hostname, 443))
+        logging.info(f"TLS: Certificate retrieved successfully")
+        
+        x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        
         def decode_byte_string(byte_string):
             return byte_string.decode('utf-8') if isinstance(byte_string, bytes) else byte_string
 
@@ -76,12 +93,9 @@ def fetchTlsCert(url: str) -> dict:
 
         return cert_info
 
-    except RequestException as e:
-        raise Exception(f"Error fetching the URL: {str(e)}")
-    except ssl.SSLError as e:
-        raise Exception(f"SSL Error: {str(e)}")
     except Exception as e:
-        raise Exception(f"Error parsing certificate: {str(e)}")
+        logging.error(f"Unexpected error: {str(e)}")
+        raise Exception(f"Error processing certificate: {str(e)}")
 
 # For testing
 if __name__ == "__main__":

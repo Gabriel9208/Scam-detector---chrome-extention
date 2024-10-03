@@ -13,30 +13,31 @@ export const Result = () => {
   }
 
   const getText = (score) => {
-    if (score > 2) return 'Malicious';
-    if (score > 1) return 'Suspicious';
-    return 'Safe';
+    if (score > 2) return '惡意';
+    if (score > 1) return '可疑';
+    return '安全';
   }
 
+  const normalizedScore = 100 - (riskScore / 3) * 100;
 
   const renderContent = () => {
     if (loading) {
       return {
         value: 100,
-        text: 'Loading...',
+        text: '載入中...',
         color: '#6b7280',
         className: 'loading-spin'
       };
     } else if (error) {
       return {
         value: 100,
-        text: '!',
+        text: '載入失敗',
         color: '#DC2626',
         className: ''
       };
     } else {
       return {
-        value: 100,
+        value: normalizedScore,
         text: getText(riskScore),
         color: getColor(riskScore),
         className: ''

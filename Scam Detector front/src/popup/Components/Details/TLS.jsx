@@ -6,7 +6,7 @@ export const TLS = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold'}}>TLS data</p>
+            <p style={{fontWeight: 'bold', color: '#2a4467' }}>TLS data</p>
             {loading ? (
                 <div>Loading TLS data...</div>
             ) : error ? (

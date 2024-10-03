@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\yen08\Desktop\Scam detection\Scam Detector back\venv
+set VIRTUAL_ENV=C:\Users\yen08\Desktop\scamDetector\Scam-detector---firefox-extention\Scam Detector back\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

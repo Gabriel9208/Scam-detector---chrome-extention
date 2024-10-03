@@ -2,6 +2,7 @@ import requests, json, re
 from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
 import os
+import logging
 
 from Data.whoisInfo import urlToDomain
 
@@ -70,8 +71,12 @@ def findUniNum(domain:str, companyName:str=None):
         # reliable company name (from whois data or tls cert data)
         searchByCompanyName = f"https://www.googleapis.com/customsearch/v1?q={companyName}&key={engine_api}&cx={search_num_id}"
         
-        searchDataWithCompanyName = json.loads(requests.get(searchByCompanyName,headers=headers).text)
-        
+        try:
+            searchDataWithCompanyName = json.loads(requests.get(searchByCompanyName,headers=headers).text)
+        except Exception as e:
+            logging.error("findbiz limit", e)
+            return -1
+
         # have quota limit
         if 'items' not in searchDataWithCompanyName:
             print(f"No search results found for company name: {companyName}")

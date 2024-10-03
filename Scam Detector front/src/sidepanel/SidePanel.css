@@ -1,27 +1,119 @@
 @media (prefers-color-scheme: light) {
   a:hover {
-    color: #61dafb;
+    color: #fff;
   }
 }
 
 main {
-  text-align: center;
-  padding: 1em;
+  padding: 0; 
   margin: 0 auto;
+  width: 100%;
+  font-family: Georgia;
+  background-color: #fff; 
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+  text-transform: uppercase;
+  line-height: 1.2rem;
+  margin: 1rem 0rem 0.25rem 0rem;
+  color: rgb(42, 68, 103);
+}
+
+h1  {
+  text-align: center;
+  color: white;
+  padding: 1.5rem;
+  background-color: rgb(42, 68, 103);
+  margin: 0; 
+  font-size: 1.5rem; 
+  font-weight: bold;
+}
+
+.header-container {
+  background-color: rgb(42, 68, 103);
+  padding: 0; 
+  margin-bottom: 1rem;
+  width: 100%; 
+}
+
+.input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.result-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 3rem;
+  flex-direction: column;
+  margin-top: 3rem;
+}
+
+input[type="text"] {
+  width: calc(100% - 120px); 
+  padding: 10px;
+  margin-right: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem; 
+}
+
+button {
+  padding: 8px 12px; 
+  border: none;
+  border-radius: 5px;
+  background-color: rgb(83 116 160);  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #35547a;
+}
+
+.content-container {
+  margin-top: 5px;
+  margin-left: 10px;
+}
+
+.indent-container {
+  margin-left: 20px;
+  margin-bottom: 15px;
 }
 
 h3 {
-  color: #61dafb;
-  text-transform: uppercase;
-  font-size: 1.5rem;
-  font-weight: 200;
-  line-height: 1.2rem;
-  margin: 2rem auto;
+  margin-top: 0;
 }
 
-a {
-  font-size: 0.5rem;
-  margin: 0.5rem;
-  color: #cccccc;
-  text-decoration: none;
+.loading, .error {
+  color: red;
+  font-weight: bold;
+}
+
+.toggle-section {
+  margin-bottom: 10px;
+  background-color: #fff;
+}
+
+.toggle-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  display: inline-block;
+  margin-right: 10px;
+  transition: transform 0.3s ease;
+}
+
+.toggle-icon.open {
+  transform: rotate(90deg);
+}
+
+.toggle-content {
+  margin-left: 20px;
 }

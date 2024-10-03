@@ -6,7 +6,7 @@ export const PageInfo = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold'}}>Page information</p>
+            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Page information</p>
             {loading ? (
                 <div>Loading page information...</div>
             ) : error ? (

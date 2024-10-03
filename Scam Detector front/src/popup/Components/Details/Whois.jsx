@@ -6,7 +6,7 @@ export const Whois = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold'}}>Whois data</p> 
+            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Whois data</p> 
             {loading ? (
                 <div>Loading Whois data...</div>
             ) : error ? (

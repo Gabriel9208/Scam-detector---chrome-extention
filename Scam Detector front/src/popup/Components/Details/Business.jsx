@@ -6,7 +6,7 @@ export const Business = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold'}}>Business registration record</p>
+            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Business registration record</p>
             {loading ? (
                 <div>Loading business registration record...</div>
             ) : error ? (

@@ -132,53 +132,50 @@ export const Analysis = () => {
 
   return (
     <div style={{ marginBottom: "50px" }}>
-      <h2 style={{ marginBottom: "30px" }}>Domain Analysis</h2>
+      <h2 style={{ marginBottom: "30px" }}>風險評估</h2>
       <div className='indent-container'>
-        <h3>Risk Assessment :</h3>
         <div className='indent-container'>
-          <ul>
-            {isDomainNew && <li>Warning: This is a relatively new domain, which may pose higher risk.</li>}
-          {isDomainExpiringSoon && <li>Warning: The domain is expiring soon. This could indicate neglect or potential abandonment.</li>}
-          {isTLSExpiringSoon && <li>Warning: The TLS certificate is expiring soon. This could lead to security warnings in browsers.</li>}
-          {domainExpired && <li>Malicious: The domain has expired.</li>}
-          {tlsExpired && <li>Malicious: The TLS certificate has expired.</li>}
-          {!isDomainNew && !isDomainExpiringSoon && !isTLSExpiringSoon && <li>No immediate time-related risks detected.</li>}
+          {isDomainNew && <p>小心: 這是一個相對較新的域名，可能存在較高的風險。</p>}
+          {isDomainExpiringSoon && <p>小心: 域名即將到期。這可能表明域名被忽視或可能被放棄。</p>}
+          {isTLSExpiringSoon && <p>小心: TLS 證書即將到期。這可能會在瀏覽器中導致安全警告。</p>}
+          {domainExpired && <p>惡意: 域名已過期。</p>}
+          {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
+          {!isDomainNew && !isDomainExpiringSoon && !isTLSExpiringSoon && <p>未檢測到立即的時間相關風險。</p>}
           {(() => {
-            if (caStatus === null) return <li>Checking the Certificate Authority status...</li>;
-            if (caError) return <li>Warning: Unable to verify the Certificate Authority (CA) status.</li>;
-            if (caStatus === true) return <li>The Certificate Authority is trusted.</li>;
-            if (caStatus === false) return <li>Malicious: The Certificate Authority is not trusted.</li>;
-            return null;
+              if (caStatus === null) return <p>正在檢查證書授權機構的狀態...</p>;
+              if (caError) return <p>警告: 無法驗證證書授權機構 (CA) 的狀態。</p>;
+              if (caStatus === true) return <p>證書授權機構已獲信任。</p>;
+              if (caStatus === false) return <p>惡意: 證書授權機構未獲信任。</p>;
+              return null;
             })()}
-          </ul>
         </div>
 
-        <h3>Time Analysis :</h3>
+        <h3>時間分析 :</h3>
         <div className='indent-container'>
-          {domainExpired && <p>Warning: The domain has expired.</p>}
-          {tlsExpired && <p>Warning: The TLS certificate has expired.</p>}
+          {domainExpired && <p>惡意: 域名已過期。</p>}
+          {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
           {!domainExpired && !tlsExpired &&
             <>
-              <p>Domain Age: {domainAge} days {isDomainNew ? '(New Domain)' : '(Established Domain)'}</p>
-              <p>Days until Domain Expiration: {daysUntilExpiration} {isDomainExpiringSoon ? '(Expiring Soon!)' : ''}</p>
-              <p>Days until TLS Certificate Expiration: {daysUntilTLSExpiration} {isTLSExpiringSoon ? '(Expiring Soon!)' : ''}</p>
+              <p>域齡: {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
+              <p>域名到期日: {daysUntilExpiration} {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
+              <p>TLS 證書到期日: {daysUntilTLSExpiration} {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }
         </div>
-        <h3>Validity Analysis :</h3>
+        <h3>有效性分析 :</h3>
         <div className='indent-container'>
-          <p>The TLS certificate CA is: {
+          <p>TLS 證書 CA 是: {
             caError ? caError :
-              caStatus === null ? "Checking..." :
-                caStatus ? "Trusted" : "Not Trusted"
+              caStatus === null ? "檢查中..." :
+                caStatus ? "已獲信任" : "未獲信任"
           }</p>
         </div>
-        <h3>Data Availability :</h3>
+        <h3>數據可用性 :</h3>
         <div className='indent-container'>
-          {tlsInfo ? <p>TLS information is available.</p> : <p>Warning: TLS information is not available.</p>}
-          {whoisInfo ? <p>Whois information is available.</p> : <p>Warning: Whois information is not available.</p>}
-          {businessInfo ? <p>Business information is available.</p> : <p>Warning: Business information is not available.</p>}
-          {pageInfo ? <p>Page information is available.</p> : <p>Warning: Page information is not available.</p>}
+          {tlsInfo ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
+          {whoisInfo ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
+          {businessInfo ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
+          {pageInfo ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
         </div>
       </div>
     </div>
@@ -247,7 +244,3 @@ function calculateDaysDifference(date1, date2) {
   const diffTime = Math.abs(date2 - date1);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
-// Example usage:
-// <Analysis dateString="2029-07-12 00:00:00 (UTC+8)" />
-// or
-// <Analysis dateString="Mar 3 23:59:59 2025 GMT" />
