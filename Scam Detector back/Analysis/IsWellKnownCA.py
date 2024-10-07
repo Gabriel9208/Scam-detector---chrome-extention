@@ -29,19 +29,9 @@ def isTrustedCA(ca: str):
             logging.error("Could not find a column for Certificate Name")
             return {"is_trusted_ca": False}
         
-        wellKnownCA = set(certRecord[cert_name_column].dropna().tolist())
+        wellKnownCA = ca in set(certRecord[cert_name_column].dropna().tolist())
         
-        logging.info(f"Checking CA: {ca}")
-        logging.info("First 5 well-known CAs:")
-        for i, known_ca in enumerate(list(wellKnownCA)[:5]):
-            logging.info(f"  {known_ca}")
-        
-        if ca.strip() in wellKnownCA:
-            logging.info(f"Result: {ca} is a trusted CA")
-            return {"is_trusted_ca": True}
-        else:
-            logging.info(f"Result: {ca} is not a trusted CA")
-            return {"is_trusted_ca": False}
+        return {"is_trusted_ca": wellKnownCA}
     
     except Exception as e:
         logging.error(f"Error in isTrustedCA: {str(e)}")

@@ -3,8 +3,8 @@ import { GlobalContext } from '../SidePanel.jsx';
 
 import axios from 'axios';
 
-export const Analysis = () => {
-  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore } = useContext(GlobalContext);
+export const Analysis = ({ url }) => {
+  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB } = useContext(GlobalContext);
   const [caStatus, setCaStatus] = useState(null);
   const [caError, setCaError] = useState(null);
 
@@ -41,6 +41,7 @@ export const Analysis = () => {
     const tlsExpirationDateString = tlsInfo?.notAfter;
 
     if (!creationDateString || !expirationDateString || !tlsExpirationDateString) {
+      console.log('Score calculation: Missing date information');
       return {};
     }
 
@@ -49,6 +50,7 @@ export const Analysis = () => {
     const tlsExpirationDate = parseCustomDateToUTC8(tlsExpirationDateString);
 
     if (!creationDate || !expirationDate || !tlsExpirationDate) {
+      console.log('Score calculation: Failed to parse date information');
       return {};
     }
 
@@ -65,6 +67,14 @@ export const Analysis = () => {
     const isDomainExpiringSoon = daysUntilExpiration <= 30;
     const isTLSExpiringSoon = daysUntilTLSExpiration <= 30;
 
+    console.log('Score calculation: Domain age:', domainAge);
+    console.log('Score calculation: Days until domain expiration:', daysUntilExpiration);
+    console.log('Score calculation: Days until TLS expiration:', daysUntilTLSExpiration);
+    console.log('Score calculation: Domain expired:', domainExpired);
+    console.log('Score calculation: TLS expired:', tlsExpired);
+    console.log('Score calculation: Is domain new:', isDomainNew);
+    console.log('Score calculation: Is domain expiring soon:', isDomainExpiringSoon);
+    console.log('Score calculation: Is TLS expiring soon:', isTLSExpiringSoon);
     return {
       creationDate,
       expirationDate,
@@ -108,33 +118,60 @@ export const Analysis = () => {
         setCaStatus(null);
         setCaError(null);
       }
+      
+      if (url) {
+        try {
+          const response = await axios.post('http://localhost:8000/scam-detector/analysis/phish/', {
+            url: url
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          // Axios automatically throws an error for non-2xx status codes
+          const data = response.data;
+          setInPhishDB(data.result.in_phish_db);
+        } catch (error) {
+          console.error("Error checking CA status:", error);
+          setCaError("Failed to verify CA status");
+        }
+      }
     };
 
     checkCAStatus();
   }, [tlsInfo]);
 
   useEffect(() => {
-    const newRiskScore =
-      (domainExpired ? 2 : 0) +
-      (tlsExpired ? 2 : 0) +
-      (isDomainExpiringSoon ? 0.5 : 0) +
-      (isTLSExpiringSoon ? 0.5 : 0) +
-      (caStatus ? 0 : 2) +
-      (isDomainNew ? 0.5 : 0) +
+    const scoreContributions = {
+      domainExpired: domainExpired ? 2 : 0,
+      tlsExpired: tlsExpired ? 2 : 0,
+      inPhishDB: inPhishDB ? 10 : 0,
+      isDomainExpiringSoon: isDomainExpiringSoon ? 0.5 : 0,
+      isTLSExpiringSoon: isTLSExpiringSoon ? 0.5 : 0,
+      caStatus: caStatus === null ? 0.5 : (caStatus ? 0 : 2),
+      isDomainNew: isDomainNew ? 0.5 : 0,
+      businessInfo: businessInfo ? 0 : 0.5,
+      pageInfo: pageInfo ? 0 : 0.5,
+      tlsInfo: tlsInfo ? 0 : 0.5,
+      whoisInfo: whoisInfo ? 0 : 0.5
+    };
 
-      (businessInfo ? 0 : 0.5) +
-      (pageInfo ? 0 : 0.5) +
-      (tlsInfo ? 0 : 0.5) +
-      (whoisInfo ? 0 : 0.5);
+    const newRiskScore = Object.values(scoreContributions).reduce((a, b) => a + b, 0);
+
+    console.log("Risk score contributions:", scoreContributions);
+    
+    console.log('Score:', newRiskScore);
 
     setRiskScore(newRiskScore);
-  }, [domainExpired, tlsExpired, isDomainExpiringSoon, isTLSExpiringSoon, caStatus, isDomainNew]);
+  }, [url, domainExpired, tlsExpired, isDomainExpiringSoon, isTLSExpiringSoon, caStatus, isDomainNew, inPhishDB, businessInfo, pageInfo, tlsInfo, whoisInfo]);
 
   return (
     <div style={{ marginBottom: "50px" }}>
       <h2 style={{ marginBottom: "30px" }}>風險評估</h2>
       <div className='indent-container'>
-        <div className='indent-container'>
+        <div>
+          {inPhishDB && <p>惡意: 此網站被收錄於釣魚網站資料庫中。</p>}
           {isDomainNew && <p>小心: 這是一個相對較新的域名，可能存在較高的風險。</p>}
           {isDomainExpiringSoon && <p>小心: 域名即將到期。這可能表明域名被忽視或可能被放棄。</p>}
           {isTLSExpiringSoon && <p>小心: TLS 證書即將到期。這可能會在瀏覽器中導致安全警告。</p>}
@@ -149,7 +186,6 @@ export const Analysis = () => {
               return null;
             })()}
         </div>
-
         <h3>時間分析 :</h3>
         <div className='indent-container'>
           {domainExpired && <p>惡意: 域名已過期。</p>}
@@ -172,10 +208,10 @@ export const Analysis = () => {
         </div>
         <h3>數據可用性 :</h3>
         <div className='indent-container'>
-          {tlsInfo ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
-          {whoisInfo ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
-          {businessInfo ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
-          {pageInfo ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
+          {tlsInfo && Object.keys(tlsInfo).length > 0 ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
+          {whoisInfo && Object.keys(whoisInfo).length > 0 ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
+          {businessInfo && Object.keys(businessInfo).length > 0 ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
+          {pageInfo && Object.keys(pageInfo).length > 0 ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
         </div>
       </div>
     </div>

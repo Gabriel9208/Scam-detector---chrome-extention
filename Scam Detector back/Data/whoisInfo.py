@@ -1,8 +1,7 @@
 import socket
 import whois
 from urllib.parse import urlparse
-#whois365
-#global whois
+import logging
 
 def urlToDomain(url: str) -> str:
     subDomain = urlparse(url).netloc
@@ -38,10 +37,13 @@ def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
     for line in rawWhois.splitlines():
         if "Registrar WHOIS Server" in line:
             registrarWhoisServer = line.split(":", 1)[1].strip()
+            logging.info(f"Registrar WHOIS Server: {registrarWhoisServer}")
         if "Domain Name" in line:
             domainName = line.split(":", 1)[1].strip()
         if registrarWhoisServer and domainName:
             break
+    
+    logging.info(f"WHOIS data: {rawWhois}")
 
     return registrarWhoisServer, domainName, rawWhois
 
@@ -71,6 +73,8 @@ def queryWhoisServer(registrarWhois: str, queryDomain: str) -> str:
     except Exception as e:
         print(f"TCP connection failed: {e}")
         raise SystemExit(1)
+
+    logging.info(f"WHOIS data: {response.decode()}")
 
     cleanedResponse = response.decode().split(">", 1)[0]
     return cleanedResponse

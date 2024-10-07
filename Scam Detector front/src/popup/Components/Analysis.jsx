@@ -3,8 +3,8 @@ import { GlobalContext } from '../Popup.jsx';
 
 import axios from 'axios';
 
-export const Analysis = () => {
-  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore } = useContext(GlobalContext);
+export const Analysis = ({ url }) => {
+  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB } = useContext(GlobalContext);
   const [caStatus, setCaStatus] = useState(null);
   const [caError, setCaError] = useState(null);
 
@@ -64,7 +64,7 @@ export const Analysis = () => {
     const isDomainNew = domainAge !== -1 && domainAge <= 365;
     const isDomainExpiringSoon = daysUntilExpiration <= 30;
     const isTLSExpiringSoon = daysUntilTLSExpiration <= 30;
-
+        
     return {
       creationDate,
       expirationDate,
@@ -108,6 +108,24 @@ export const Analysis = () => {
         setCaStatus(null);
         setCaError(null);
       }
+      if (url) {
+        try {
+          const response = await axios.post('http://localhost:8000/scam-detector/analysis/phish/', {
+            url: url
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          // Axios automatically throws an error for non-2xx status codes
+          const data = response.data;
+          setInPhishDB(data.result.in_phish_db);
+        } catch (error) {
+          console.error("Error checking CA status:", error);
+          setCaError("Failed to verify CA status");
+        }
+      }
     };
 
     checkCAStatus();
@@ -117,6 +135,7 @@ export const Analysis = () => {
     const newRiskScore =
       (domainExpired ? 2 : 0) +
       (tlsExpired ? 2 : 0) +
+      (inPhishDB ? 10 : 0) +
       (isDomainExpiringSoon ? 0.5 : 0) +
       (isTLSExpiringSoon ? 0.5 : 0) +
       (caStatus ? 0 : 2) +
@@ -134,6 +153,9 @@ export const Analysis = () => {
     <div style={{ marginBottom: "50px" }}>
       <h2 style={{ marginBottom: "30px" }}>風險評估</h2>
       <div className='indent-container'>
+        <div className='indent-container'>
+        {inPhishDB && <p>惡意: 此網站被收錄於釣魚網站資料庫中。</p>}
+        </div>
         <div className='indent-container'>
           {isDomainNew && <p>小心: 這是一個相對較新的域名，可能存在較高的風險。</p>}
           {isDomainExpiringSoon && <p>小心: 域名即將到期。這可能表明域名被忽視或可能被放棄。</p>}

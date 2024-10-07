@@ -181,6 +181,7 @@ def findbiz(url:str, companyName:str=None, num=None):
          # If a business number is provided, directly request business info
          return request_to_biz(num)[0]
      
+    logging.info(f"findbiz companyName: {companyName}")
     if companyName:
         uniNum = findUniNum(domain, companyName)  
         return request_to_biz(uniNum)[0]

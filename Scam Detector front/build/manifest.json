@@ -1,5 +1,5 @@
 {
-  "name": "Scam Detector",
+  "name": "Scam Detector ➡️ Dev",
   "description": "",
   "version": "0.0.0",
   "manifest_version": 3,
@@ -21,12 +21,12 @@
   },
   "content_scripts": [
     {
-      "js": [
-        "assets/index.js-loader-21281b59.js"
-      ],
       "matches": [
         "http://*/*",
         "https://*/*"
+      ],
+      "js": [
+        "src/contentScript/index.js-loader.js"
       ]
     }
   ],
@@ -35,22 +35,21 @@
   },
   "web_accessible_resources": [
     {
-      "matches": [],
       "resources": [
         "img/logo-16.png",
         "img/logo-34.png",
         "img/logo-48.png",
         "img/logo-128.png"
       ],
-      "use_dynamic_url": false
+      "matches": []
     },
     {
       "matches": [
-        "http://*/*",
-        "https://*/*"
+        "<all_urls>"
       ],
       "resources": [
-        "assets/chunk-5135a214.js"
+        "**/*",
+        "*"
       ],
       "use_dynamic_url": true
     }

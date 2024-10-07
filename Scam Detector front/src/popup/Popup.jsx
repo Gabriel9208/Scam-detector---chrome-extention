@@ -85,7 +85,7 @@ export const Popup = () => {
         <div className='content-container'>
           <GlobalProvider>
             <Result />
-            <Analysis />
+            <Analysis url={submitUrl}/>
             <Detail url={submitUrl}/>
           </GlobalProvider>
         </div>

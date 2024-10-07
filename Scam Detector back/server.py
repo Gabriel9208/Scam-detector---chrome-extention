@@ -15,6 +15,7 @@ from Data.findbiz import findbiz
 from Data.scraper import scraper
 
 from Analysis.IsWellKnownCA import isTrustedCA
+from Analysis.checkPhishDB import checkPhishDB
 
 # Configure logging to a file
 logging.basicConfig(
@@ -44,6 +45,10 @@ class FindBizRequest(BaseModel):
     
 class CARequest(BaseModel):
     ca: str
+    
+class URLRequest(BaseModel):
+    url: str
+    
 
 @app.post("/scam-detector/detail/whois/")
 async def whois(url: Url):
@@ -58,6 +63,7 @@ async def whois(url: Url):
             content={"error": str(e), "traceback": traceback.format_exc()}
         )
 
+
 @app.post("/scam-detector/detail/findbiz/")
 async def findBizRegistration(request: FindBizRequest):
     try:
@@ -71,11 +77,13 @@ async def findBizRegistration(request: FindBizRequest):
         logging.error(f"Error in FindBiz endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/scam-detector/detail/tls/")
 async def tls(url: Url):
     logging.info(f"Received TLS request for URL: {url.url}")
     result = await asyncio.to_thread(fetchTlsCert, url.url)
     return JSONResponse(content=json.loads(json.dumps(result, default=str)))  # Ensure JSON response
+
 
 @app.post("/scam-detector/detail/web-content/")
 async def web_content(url: Url):
@@ -90,11 +98,12 @@ async def web_content(url: Url):
         logging.error(f"Error in Web Content endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/scam-detector/analysis/ca/")
 async def check_ca(request: CARequest):
     try:
         logging.info(f"Received CA: /{request.ca}/")
-        result = isTrustedCA(request.ca)
+        result = await asyncio.to_thread(isTrustedCA, request.ca)
         logging.info(f"CA No HTTPException: {result}")
         return JSONResponse(content={"result": result})  # Ensure JSON response
     except HTTPException as http_exc:
@@ -102,4 +111,18 @@ async def check_ca(request: CARequest):
         raise http_exc
     except Exception as e:
         logging.info(f"CA Exception: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+@app.post("/scam-detector/analysis/phish/")
+async def check_phish(request: URLRequest):
+    try:
+        logging.info(f"Received PhishDB request for URL: {request.url}")
+        result = await asyncio.to_thread(checkPhishDB, request.url)
+        return JSONResponse(content={"result": result})  # Ensure JSON response
+    except HTTPException as http_exc:
+        logging.info(f"PhishDB HTTPException: {http_exc}")
+        raise http_exc
+    except Exception as e:
+        logging.info(f"PhishDB Exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))

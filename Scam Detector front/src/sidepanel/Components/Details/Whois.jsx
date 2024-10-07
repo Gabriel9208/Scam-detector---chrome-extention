@@ -6,11 +6,11 @@ export const Whois = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Whois data</p> 
+            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Whois 資料</p> 
             {loading ? (
-                <div>Loading Whois data...</div>
+                <div>正在載入 Whois 資料...</div>
             ) : error ? (
-                <div>Error: {error}</div>
+                <div>載入錯誤</div>
             ) : !whoisInfo ? (
                 <span></span>
             ) : (
