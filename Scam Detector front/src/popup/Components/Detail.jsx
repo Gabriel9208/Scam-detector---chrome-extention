@@ -36,10 +36,53 @@ export const Detail = ({ url }) => {
             ])
         );
 
-        const fetchEndpoint = async (endpoint, setter) => {
+        const cutStringAtNonAlpha = (str) => {
+            const match = str.match(/^[A-Za-z0-9\s.\u4e00-\u9fff]+/);
+            return match ? match[0].trim() : '';
+        }
+
+        let orgName = "";
+        const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy"]
+        const fetchEndpoint = async (endpoint, setter, ...args) => {
             try {
-                const response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url });
-                setter(decodeData(response.data));
+                // if(endpoint === 'findbiz'){
+                //     console.log("findbiz orgName:", orgName);
+                // }
+                let response;
+                
+                if(endpoint === 'findbiz' && args.length > 0){
+                    response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url, organizationName: args[0] });
+                }
+                else{
+                    response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url });
+                }
+
+                if ("details" in response.data && response.data.details.includes("404")) {
+                    console.log("Endpoint 404 not found:", endpoint);
+                    setter({});
+                }
+                else{
+                    setter(decodeData(response.data));
+                }
+
+                if (endpoint === 'whois') {
+                    if("Registrant" in response.data) {
+                        const containsKeyword = orgNameHidden.some(keyword => cutStringAtNonAlpha(response.data.Registrant).toLowerCase().includes(keyword.toLowerCase()));
+                        
+                        if (!containsKeyword) {
+                            orgName = cutStringAtNonAlpha(response.data.Registrant);
+                            console.log("Registrant:", orgName);
+                        }
+                    }
+                    else if ("Registrant Organization" in response.data) {
+                        const containsKeyword = orgNameHidden.some(keyword => cutStringAtNonAlpha(response.data["Registrant Organization"]).toLowerCase().includes(keyword.toLowerCase()));
+                        
+                        if (!containsKeyword) {
+                            orgName = cutStringAtNonAlpha(response.data["Registrant Organization"]);
+                            console.log("Registrant Organization:", orgName);
+                        }
+                    }
+                }
             } catch (err) {
                 console.error(`Error fetching ${endpoint}:`, err);
                 setter({ error: err.response?.data?.detail || err.message });
@@ -49,9 +92,15 @@ export const Detail = ({ url }) => {
         await Promise.all([
             fetchEndpoint('whois', setWhoisInfo),
             fetchEndpoint('tls', setTlsInfo),
-            fetchEndpoint('findbiz', setBusinessInfo),
             fetchEndpoint('web-content', setPageInfo)
         ]);
+
+        // if (orgName.trim() !== "") {
+        //     await fetchEndpoint('findbiz', setBusinessInfo, orgName);
+        // }
+        // else{
+        //     await fetchEndpoint('findbiz', setBusinessInfo);
+        // }
 
         setLoading(false);
     }, [url]);
@@ -62,7 +111,7 @@ export const Detail = ({ url }) => {
 
     return (
         <div>
-            <ToggleSection title="Detailed information">
+            <ToggleSection title="詳細資訊">
                 <Whois loading={loading} error={error} />
                 <TLS loading={loading} error={error} />
                 <Business loading={loading} error={error} />

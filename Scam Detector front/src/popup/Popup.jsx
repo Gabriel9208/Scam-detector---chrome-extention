@@ -1,4 +1,4 @@
-import { useState, createContext, useMemo } from 'react'
+import { useState, createContext, useMemo, useCallback, useEffect } from 'react'
 import {Result} from './Components/Result.jsx'
 import {Analysis} from './Components/Analysis.jsx'
 import {Detail} from './Components/Detail.jsx'
@@ -11,7 +11,7 @@ import './Popup.css'
 
 export const GlobalContext = createContext();
 
-const GlobalProvider = ({ children }) => {
+const GlobalProvider = ({ children, url }) => {
   const [whoisInfo, setWhoisInfo] = useState(null);
   const [tlsInfo, setTlsInfo] = useState(null);
   const [businessInfo, setBusinessInfo] = useState(null);
@@ -19,6 +19,7 @@ const GlobalProvider = ({ children }) => {
   const [riskScore, setRiskScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [inPhishDB, setInPhishDB] = useState(false);
 
   const contextValue = useMemo(() => ({
     whoisInfo,
@@ -31,11 +32,25 @@ const GlobalProvider = ({ children }) => {
     setPageInfo,
     riskScore,
     setRiskScore,
+    inPhishDB,
+    setInPhishDB,
     loading,
     setLoading,
     error,
     setError
-  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error]);
+  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB]);
+
+  // Reset all states when url changes
+  useEffect(() => {
+    setWhoisInfo(null);
+    setTlsInfo(null);
+    setBusinessInfo(null);
+    setPageInfo(null);
+    setRiskScore(0);
+    setLoading(true);
+    setError(null);
+    setInPhishDB(false);
+  }, [url]);
 
   return (
     <GlobalContext.Provider value={contextValue}>
@@ -45,28 +60,12 @@ const GlobalProvider = ({ children }) => {
 };
 
 export const Popup = () => {
-  
-
   const [url, setUrl] = useState('');
   const [submitUrl, setSubmitUrl] = useState('');
 
-  /* Feature: Default to current tab's URL
-  
-  // Function to get the current tab's URL
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0] && tabs[0].url) {
-      setSubmitUrl(tabs[0].url);
-    }
-  });
-  
-  // detect url change
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.active && tab.url) {
-      setSubmitUrl(tab.url);
-    }
-  });
-
-  */
+  const handleSubmit = useCallback(() => {
+    setSubmitUrl(url);
+  }, [url]);
 
   return (
     <main>
@@ -79,11 +78,11 @@ export const Popup = () => {
           placeholder="Enter URL" 
           value={url}
           onChange={(e) => setUrl(e.target.value)}/>
-        <button onClick={() => setSubmitUrl(url)}>Analyze</button>
+        <button onClick={handleSubmit}>Analyze</button>
       </div>
       {submitUrl && (
         <div className='content-container'>
-          <GlobalProvider>
+          <GlobalProvider url={submitUrl}>
             <Result />
             <Analysis url={submitUrl}/>
             <Detail url={submitUrl}/>
@@ -94,4 +93,4 @@ export const Popup = () => {
   )
 }
 
-export default Popup
+export default SidePanel

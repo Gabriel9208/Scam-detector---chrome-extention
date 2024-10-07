@@ -6,11 +6,11 @@ export const PageInfo = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold', color: '#2a4467'}}>Page information</p>
+            <p style={{fontWeight: 'bold', color: '#2a4467', marginTop: '50px'}}>頁面資訊</p>
             {loading ? (
-                <div>Loading page information...</div>
+                <div>正在載入頁面資訊...</div>
             ) : error ? (
-                <div>Error: {error}</div>
+                <div>載入錯誤</div>
             ) : !pageInfo ? (
                 <span></span>
             ) : (

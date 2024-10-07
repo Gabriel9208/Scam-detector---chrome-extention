@@ -6,7 +6,7 @@ export const Business = () => {
 
     return (
         <div>
-            <p style={{fontWeight: 'bold', color: '#2a4467'}}>公司登記記錄</p>
+            <p style={{fontWeight: 'bold', color: '#2a4467', marginTop: '50px'}}>公司登記記錄</p>
             {loading ? (
                 <div>正在載入公司登記記錄...</div>
             ) : error ? (
