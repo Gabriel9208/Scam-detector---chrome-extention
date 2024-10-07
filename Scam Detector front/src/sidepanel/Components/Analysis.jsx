@@ -4,7 +4,7 @@ import { GlobalContext } from '../SidePanel.jsx';
 import axios from 'axios';
 
 export const Analysis = ({ url }) => {
-  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB } = useContext(GlobalContext);
+  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB, loading } = useContext(GlobalContext);
   const [caStatus, setCaStatus] = useState(null);
   const [caError, setCaError] = useState(null);
 
@@ -94,10 +94,11 @@ export const Analysis = ({ url }) => {
   useEffect(() => {
     console.log("Analysis effect running, tlsInfo:", tlsInfo);
     const checkCAStatus = async () => {
-      if (tlsInfo && tlsInfo.issuer && tlsInfo.issuer["Common Name"]) {
+      if (tlsInfo && tlsInfo.issuer && ("Common Name" in tlsInfo.issuer || "commonName" in tlsInfo.issuer)) {
+        const caName = "Common Name" in tlsInfo.issuer ? tlsInfo.issuer["Common Name"] : tlsInfo.issuer["commonName"];
         try {
           const response = await axios.post('http://localhost:8000/scam-detector/analysis/ca/', {
-            ca: tlsInfo.issuer["Common Name"]
+            ca: caName
           }, {
             headers: {
               'Content-Type': 'application/json',
@@ -179,7 +180,8 @@ export const Analysis = ({ url }) => {
           {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
           {!isDomainNew && !isDomainExpiringSoon && !isTLSExpiringSoon && <p>未檢測到立即的時間相關風險。</p>}
           {(() => {
-              if (caStatus === null) return <p>正在檢查證書授權機構的狀態...</p>;
+              if (caStatus === null && loading) return <p>正在檢查證書授權機構的狀態...</p>;
+              else if (caStatus === null && !loading) return <p>警告: 無法驗證證書授權機構 (CA) 的狀態。</p>;
               if (caError) return <p>警告: 無法驗證證書授權機構 (CA) 的狀態。</p>;
               if (caStatus === true) return <p>證書授權機構已獲信任。</p>;
               if (caStatus === false) return <p>惡意: 證書授權機構未獲信任。</p>;
@@ -200,10 +202,10 @@ export const Analysis = ({ url }) => {
         </div>
         <h3>有效性分析 :</h3>
         <div className='indent-container'>
-          <p>TLS 證書 CA 是: {
+          <p>{
             caError ? caError :
-              caStatus === null ? "檢查中..." :
-                caStatus ? "已獲信任" : "未獲信任"
+              caStatus === null ? (loading ? "檢查中..." : "警告: 無法驗證證書授權機構 (CA) 的狀態。") :
+                caStatus ? "TLS 證書 CA 已獲信任" : "TLS 證書 CA 未獲信任"
           }</p>
         </div>
         <h3>數據可用性 :</h3>
