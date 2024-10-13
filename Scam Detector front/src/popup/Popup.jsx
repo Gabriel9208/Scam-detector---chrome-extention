@@ -67,6 +67,12 @@ export const Popup = () => {
     setSubmitUrl(url);
   }, [url]);
 
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    }
+  }, [handleSubmit]); 
+
   return (
     <main>
       <div className='header-container'>
@@ -77,7 +83,9 @@ export const Popup = () => {
           type="text" 
           placeholder="Enter URL" 
           value={url}
-          onChange={(e) => setUrl(e.target.value)}/>
+            onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
         <button onClick={handleSubmit}>Analyze</button>
       </div>
       {submitUrl && (
@@ -93,4 +101,4 @@ export const Popup = () => {
   )
 }
 
-export default SidePanel
+export default Popup

@@ -18,6 +18,8 @@ export const Result = () => {
     return '安全';
   }
 
+  const normalizedScore = 100 - (riskScore / 3) * 100;
+
   const renderContent = () => {
     if (loading) {
       return {
@@ -35,7 +37,7 @@ export const Result = () => {
       };
     } else {
       return {
-        value: 100,
+        value: normalizedScore,
         text: getText(riskScore),
         color: getColor(riskScore),
         className: ''

@@ -37,7 +37,15 @@ export const Detail = ({ url }) => {
         );
 
         const cutStringAtNonAlpha = (str) => {
-            const match = str.match(/^[A-Za-z0-9\s.\u4e00-\u9fff]+/);
+            // Decode Unicode escape sequences
+            const decodedStr = str.replace(/\\u([a-fA-F0-9]{4})/g, (match, p1) => 
+                String.fromCharCode(parseInt(p1, 16))
+            );
+            
+            console.log("Decoded string:", decodedStr);
+            
+            const match = decodedStr.match(/^[^~!@#$%^&*()_+-=,./;':"<>?|\]\[\{\}]+/u);
+            console.log("Matched string:", match ? match[0] : "No match");
             return match ? match[0].trim() : '';
         }
 
@@ -45,9 +53,9 @@ export const Detail = ({ url }) => {
         const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy"]
         const fetchEndpoint = async (endpoint, setter, ...args) => {
             try {
-                // if(endpoint === 'findbiz'){
-                //     console.log("findbiz orgName:", orgName);
-                // }
+                if(endpoint === 'findbiz'){
+                    console.log("findbiz orgName:", orgName);
+                }
                 let response;
                 
                 if(endpoint === 'findbiz' && args.length > 0){
@@ -57,7 +65,9 @@ export const Detail = ({ url }) => {
                     response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url });
                 }
 
-                if ("details" in response.data && response.data.details.includes("404")) {
+                if (("details" in response.data && (response.data.details.includes("404") || response.data.details.includes("500"))) ||
+                ("detail" in response.data && (response.data.detail.includes("404") || response.data.detail.includes("500"))) ||
+                ("error" in response.data)) {
                     console.log("Endpoint 404 not found:", endpoint);
                     setter({});
                 }
@@ -67,20 +77,30 @@ export const Detail = ({ url }) => {
 
                 if (endpoint === 'whois') {
                     if("Registrant" in response.data) {
+                        console.log("Registrant found in response data");
                         const containsKeyword = orgNameHidden.some(keyword => cutStringAtNonAlpha(response.data.Registrant).toLowerCase().includes(keyword.toLowerCase()));
                         
+                        console.log("Contains keyword:", containsKeyword);
                         if (!containsKeyword) {
                             orgName = cutStringAtNonAlpha(response.data.Registrant);
                             console.log("Registrant:", orgName);
+                        } else {
+                            console.log("Registrant contains a hidden keyword");
                         }
                     }
                     else if ("Registrant Organization" in response.data) {
+                        console.log("Registrant Organization found in response data");
                         const containsKeyword = orgNameHidden.some(keyword => cutStringAtNonAlpha(response.data["Registrant Organization"]).toLowerCase().includes(keyword.toLowerCase()));
                         
+                        console.log("Contains keyword:", containsKeyword);
                         if (!containsKeyword) {
                             orgName = cutStringAtNonAlpha(response.data["Registrant Organization"]);
                             console.log("Registrant Organization:", orgName);
+                        } else {
+                            console.log("Registrant Organization contains a hidden keyword");
                         }
+                    } else {
+                        console.log("Neither Registrant nor Registrant Organization found in response data");
                     }
                 }
             } catch (err) {
@@ -95,12 +115,12 @@ export const Detail = ({ url }) => {
             fetchEndpoint('web-content', setPageInfo)
         ]);
 
-        // if (orgName.trim() !== "") {
-        //     await fetchEndpoint('findbiz', setBusinessInfo, orgName);
-        // }
-        // else{
-        //     await fetchEndpoint('findbiz', setBusinessInfo);
-        // }
+        if (orgName.trim() !== "") {
+            await fetchEndpoint('findbiz', setBusinessInfo, orgName);
+        }
+        else{
+            await fetchEndpoint('findbiz', setBusinessInfo);
+        }
 
         setLoading(false);
     }, [url]);

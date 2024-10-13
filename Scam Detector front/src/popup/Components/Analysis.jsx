@@ -150,12 +150,12 @@ export const Analysis = ({ url }) => {
       inPhishDB: inPhishDB ? 10 : 0,
       isDomainExpiringSoon: isDomainExpiringSoon ? 0.5 : 0,
       isTLSExpiringSoon: isTLSExpiringSoon ? 0.5 : 0,
-      caStatus: caStatus === null ? 0.5 : (caStatus ? 0 : 2),
+      caStatus: caStatus === null ? 1 : (caStatus ? 0 : 2),
       isDomainNew: isDomainNew ? 0.5 : 0,
-      businessInfo: businessInfo ? 0 : 0.5,
-      pageInfo: pageInfo ? 0 : 0.5,
-      tlsInfo: tlsInfo ? 0 : 0.5,
-      whoisInfo: whoisInfo ? 0 : 0.5
+      businessInfo: businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? 0 : 1,
+      pageInfo: pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? 0 : 1,
+      tlsInfo: tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? 0 : 1,
+      whoisInfo: whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? 0 : 1
     };
 
     const newRiskScore = Object.values(scoreContributions).reduce((a, b) => a + b, 0);

@@ -18,7 +18,6 @@ export default defineManifest({
     default_popup: 'popup.html',
     default_icon: 'img/logo-48.png',
   },
-  options_page: 'options.html',
   devtools_page: 'devtools.html',
   background: {
     service_worker: 'src/background/index.js',
@@ -46,9 +45,6 @@ export default defineManifest({
   host_permissions: [
     '<all_urls>'
   ],
-  chrome_url_overrides: {
-    newtab: 'newtab.html',
-  },
   content_security_policy: {
     extension_pages: "script-src 'self'; object-src 'self'"
   }

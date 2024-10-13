@@ -68,34 +68,45 @@ def findUniNum(domain:str, companyName:str=None):
     search_num_id = "80750484c968f42c8"
     
     if companyName:
+        companyName = re.sub(r'[^a-zA-Z\s.\u4e00-\u9fff]+', '', companyName)
         # reliable company name (from whois data or tls cert data)
         searchByCompanyName = f"https://www.googleapis.com/customsearch/v1?q={companyName}&key={engine_api}&cx={search_num_id}"
         
         try:
+            logging.info(f"Searching for uniNum with companyName: {companyName}")
             searchDataWithCompanyName = json.loads(requests.get(searchByCompanyName,headers=headers).text)
+            logging.info(f"Search response: {searchDataWithCompanyName}")
         except Exception as e:
             logging.error("findbiz limit", e)
             return -1
 
         # have quota limit
         if 'items' not in searchDataWithCompanyName:
-            print(f"No search results found for company name: {companyName}")
-            return -1
+            logging.info(f"No search results found for company name: {companyName}")
+            logging.debug(f"Search response: {searchDataWithCompanyName}")
+            return findUniNum(domain)
             
         companyNameUrl = searchDataWithCompanyName["items"][0]["formattedUrl"]
+        logging.info(f"First company URL: {companyNameUrl}")
         parsed_query = parse_qs(urlparse(companyNameUrl).query)
         
         # only search for one additional website if no is not in the url
         if "no" in parsed_query:
             uniNum = parsed_query["no"][0]
+            logging.info(f"Unified number found in first URL: {uniNum}")
         else:
+            logging.info("No unified number in first URL, checking second URL")
             companyNameUrl = searchDataWithCompanyName["items"][1]["formattedUrl"]
+            logging.info(f"Second company URL: {companyNameUrl}")
             parsed_query = parse_qs(urlparse(companyNameUrl).query)
             if "no" in parsed_query:
                 uniNum = parsed_query["no"][0]
+                logging.info(f"Unified number found in second URL: {uniNum}")
             else:
                 uniNum = -1
+                logging.warning("No unified number found in either URL")
                 
+        logging.info(f"Returning unified number: {uniNum}")
         return uniNum
         
     try:
@@ -183,14 +194,21 @@ def findbiz(url:str, companyName:str=None, num=None):
      
     logging.info(f"findbiz companyName: {companyName}")
     if companyName:
-        uniNum = findUniNum(domain, companyName)  
-        return request_to_biz(uniNum)[0]
+        logging.info(f"Searching for uniNum with domain: {domain} and companyName: {companyName}")
+        uniNum = findUniNum(domain, companyName)
+        logging.info(f"Found uniNum: {uniNum}")
+        result = request_to_biz(uniNum)[0]
+        logging.info(f"Business info result: {result}")
+        return result
     
     try:       
+        logging.info(f"Searching for uniNum with domain: {domain}")
         uniNum = findUniNum(domain)
+        logging.info(f"Found uniNum: {uniNum}")
         # Request and return business info using the found number 
-        return request_to_biz(uniNum)[0]
-        
+        result = request_to_biz(uniNum)[0]
+        logging.info(f"Business info result: {result}")
+        return result
     except ValueError as e: 
         # Handle specific ValueError exceptions
         print("ValueError:", e)
