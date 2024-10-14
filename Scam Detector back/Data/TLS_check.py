@@ -6,6 +6,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import logging
 import socket
+import certifi
 
 # Suppress only the single warning from urllib3 needed.
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -38,15 +39,23 @@ def fetchTlsCert(url: str) -> dict:
             logging.warning(f"Request failed, falling back to direct SSL: {req_err}")
             hostname = url.split('//')[1].split('/')[0]
 
-        # Use ssl.create_default_context() instead of get_server_certificate
-        context = ssl.create_default_context()
+        # Use ssl.create_default_context() with certifi
+        context = ssl.create_default_context(cafile=certifi.where())
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE  # Be cautious with this in production!
+
+        logging.info(f"TLS: Creating SSL connection to {hostname}")
         with socket.create_connection((hostname, 443)) as sock:
+            logging.info(f"TLS: Wrapping socket with SSL context")
             with context.wrap_socket(sock, server_hostname=hostname) as secure_sock:
+                logging.info(f"TLS: Retrieving peer certificate")
                 der_cert = secure_sock.getpeercert(binary_form=True)
+                logging.info(f"TLS: Loading certificate")
                 cert = x509.load_der_x509_certificate(der_cert, default_backend())
 
         logging.info(f"TLS: Certificate retrieved successfully")
         
+        logging.info(f"TLS: Extracting certificate information")
         # Use the cert object to extract information
         cert_info = {
             "subject": {attr.oid._name: attr.value for attr in cert.subject},
@@ -61,23 +70,29 @@ def fetchTlsCert(url: str) -> dict:
             "crlDistributionPoints": []
         }
 
+        logging.info(f"TLS: Extracting certificate extensions")
         # Extract extensions
         for ext in cert.extensions:
             if ext.oid == x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME:
                 cert_info['subjectAltName'] = [str(name) for name in ext.value]
+                logging.info(f"TLS: Found Subject Alternative Names")
             elif ext.oid == x509.oid.ExtensionOID.AUTHORITY_INFORMATION_ACCESS:
                 for access in ext.value:
                     if access.access_method == x509.oid.AuthorityInformationAccessOID.OCSP:
                         cert_info['OCSP'].append(str(access.access_location))
+                        logging.info(f"TLS: Found OCSP URL")
                     elif access.access_method == x509.oid.AuthorityInformationAccessOID.CA_ISSUERS:
                         cert_info['caIssuers'].append(str(access.access_location))
+                        logging.info(f"TLS: Found CA Issuers URL")
             elif ext.oid == x509.oid.ExtensionOID.CRL_DISTRIBUTION_POINTS:
                 cert_info['crlDistributionPoints'] = [str(point.full_name[0]) for point in ext.value]
+                logging.info(f"TLS: Found CRL Distribution Points")
 
+        logging.info(f"TLS: Certificate information extraction completed")
         return cert_info
 
     except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
+        logging.error(f"TLS: Unexpected error: {str(e)}")
         #raise Exception(f"Error processing certificate: {str(e)}")
         return {}
 

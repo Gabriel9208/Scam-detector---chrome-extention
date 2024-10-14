@@ -2,6 +2,7 @@ import { useContext } from 'react'
 import { GlobalContext } from '../SidePanel.jsx'
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
+import { scoreContributions } from './Analysis.jsx'
 
 export const Result = () => {
   const { riskScore, loading, error } = useContext(GlobalContext);
@@ -18,7 +19,12 @@ export const Result = () => {
     return '安全';
   }
 
-  const normalizedScore = 100 - (riskScore / 3) * 100;
+  const calculateMaxScore = () => {
+    return Object.values(scoreContributions).reduce((sum, value) => sum + value, 0);
+  };
+
+  const maxScore = calculateMaxScore();
+  const normalizedScore = 100 - (riskScore / maxScore) * 100;
 
   const renderContent = () => {
     if (loading) {

@@ -3,6 +3,20 @@ import { GlobalContext } from '../Popup.jsx';
 
 import axios from 'axios';
 
+export const scoreContributions = {
+  domainExpired: 2,
+  tlsExpired: 2,
+  inPhishDB: 10,
+  isDomainExpiringSoon: 0.5,
+  isTLSExpiringSoon: 0.5,
+  caStatus: 1,
+  isDomainNew: 0.5,
+  businessInfo: 1,
+  pageInfo: 1,
+  tlsInfo: 1,
+  whoisInfo: 1
+};
+
 export const Analysis = ({ url }) => {
   const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB, loading } = useContext(GlobalContext);
   const [caStatus, setCaStatus] = useState(null);
@@ -144,23 +158,23 @@ export const Analysis = ({ url }) => {
   }, [tlsInfo]);
 
   useEffect(() => {
-    const scoreContributions = {
-      domainExpired: domainExpired ? 2 : 0,
-      tlsExpired: tlsExpired ? 2 : 0,
-      inPhishDB: inPhishDB ? 10 : 0,
-      isDomainExpiringSoon: isDomainExpiringSoon ? 0.5 : 0,
-      isTLSExpiringSoon: isTLSExpiringSoon ? 0.5 : 0,
-      caStatus: caStatus === null ? 1 : (caStatus ? 0 : 2),
-      isDomainNew: isDomainNew ? 0.5 : 0,
-      businessInfo: businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? 0 : 1,
-      pageInfo: pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? 0 : 1,
-      tlsInfo: tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? 0 : 1,
-      whoisInfo: whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? 0 : 1
+    const calculatedScoreContributions = {
+      domainExpired: domainExpired ? scoreContributions.domainExpired : 0,
+      tlsExpired: tlsExpired ? scoreContributions.tlsExpired : 0,
+      inPhishDB: inPhishDB ? scoreContributions.inPhishDB : 0,
+      isDomainExpiringSoon: isDomainExpiringSoon ? scoreContributions.isDomainExpiringSoon : 0,
+      isTLSExpiringSoon: isTLSExpiringSoon ? scoreContributions.isTLSExpiringSoon : 0,
+      caStatus: caStatus === null ? scoreContributions.caStatus / 2 : (caStatus ? 0 : scoreContributions.caStatus),
+      isDomainNew: isDomainNew ? scoreContributions.isDomainNew : 0,
+      businessInfo: businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? 0 : scoreContributions.businessInfo,
+      pageInfo: pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? 0 : scoreContributions.pageInfo,
+      tlsInfo: tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? 0 : scoreContributions.tlsInfo,
+      whoisInfo: whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? 0 : scoreContributions.whoisInfo
     };
 
-    const newRiskScore = Object.values(scoreContributions).reduce((a, b) => a + b, 0);
+    const newRiskScore = Object.values(calculatedScoreContributions).reduce((a, b) => a + b, 0);
 
-    console.log("Risk score contributions:", scoreContributions);
+    console.log("Risk score contributions:", calculatedScoreContributions);
     
     console.log('Score:', newRiskScore);
 
@@ -194,9 +208,9 @@ export const Analysis = ({ url }) => {
           {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
           {!domainExpired && !tlsExpired &&
             <>
-              <p>域齡: {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
-              <p>域名到期日: {daysUntilExpiration} {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
-              <p>TLS 證書到期日: {daysUntilTLSExpiration} {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
+              <p>域齡: 已建立 {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
+              <p>域名到期日: 還剩{daysUntilExpiration}天過期 {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
+              <p>TLS 證書到期日: 還剩{daysUntilTLSExpiration}天過期 {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }
         </div>
@@ -210,10 +224,10 @@ export const Analysis = ({ url }) => {
         </div>
         <h3>數據可用性 :</h3>
         <div className='indent-container'>
-          {tlsInfo && Object.keys(tlsInfo).length > 0 ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
-          {whoisInfo && Object.keys(whoisInfo).length > 0 ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
-          {businessInfo && Object.keys(businessInfo).length > 0 ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
-          {pageInfo && Object.keys(pageInfo).length > 0 ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
+          {tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
+          {whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
+          {businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
+          {pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
         </div>
       </div>
     </div>

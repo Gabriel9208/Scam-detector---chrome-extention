@@ -62,50 +62,55 @@ def long_substr(data):
 def findUniNum(domain:str, companyName:str=None):
     load_dotenv()
     
+    uniNum = -1
+    
     # Custom Search JSON API
     engine_api = os.getenv('search_engine_api_key')
-    search_id = "53af66ed5b0174cc7"
+    search_whole_net = "53af66ed5b0174cc7"
     search_num_id = "80750484c968f42c8"
     
     if companyName:
-        companyName = re.sub(r'[^a-zA-Z\s.\u4e00-\u9fff]+', '', companyName)
+        companyName = companyName.encode('utf-8').decode('unicode-escape')
+        logging.info(f"decoded companyName: {companyName}")
         # reliable company name (from whois data or tls cert data)
         searchByCompanyName = f"https://www.googleapis.com/customsearch/v1?q={companyName}&key={engine_api}&cx={search_num_id}"
         
         try:
-            logging.info(f"Searching for uniNum with companyName: {companyName}")
-            searchDataWithCompanyName = json.loads(requests.get(searchByCompanyName,headers=headers).text)
+            searchDataWithCompanyName = json.loads(requests.get(searchByCompanyName, headers=headers).text)
             logging.info(f"Search response: {searchDataWithCompanyName}")
         except Exception as e:
             logging.error("findbiz limit", e)
-            return -1
+            return findUniNum(domain)
 
         # have quota limit
         if 'items' not in searchDataWithCompanyName:
             logging.info(f"No search results found for company name: {companyName}")
-            logging.debug(f"Search response: {searchDataWithCompanyName}")
+            logging.info(f"Search response: {searchDataWithCompanyName}")
+            logging.info(f"domain: {(domain)}")
+            return findUniNum(domain)  
+        
+        if len(searchDataWithCompanyName["items"]) < 1:
+            logging.info(f"No items found in search results for company name: {companyName}")
             return findUniNum(domain)
-            
-        companyNameUrl = searchDataWithCompanyName["items"][0]["formattedUrl"]
+        
+        companyNameUrl = searchDataWithCompanyName["items"][0].get("formattedUrl", "")
         logging.info(f"First company URL: {companyNameUrl}")
         parsed_query = parse_qs(urlparse(companyNameUrl).query)
         
         # only search for one additional website if no is not in the url
         if "no" in parsed_query:
             uniNum = parsed_query["no"][0]
-            logging.info(f"Unified number found in first URL: {uniNum}")
         else:
-            logging.info("No unified number in first URL, checking second URL")
-            companyNameUrl = searchDataWithCompanyName["items"][1]["formattedUrl"]
-            logging.info(f"Second company URL: {companyNameUrl}")
-            parsed_query = parse_qs(urlparse(companyNameUrl).query)
-            if "no" in parsed_query:
-                uniNum = parsed_query["no"][0]
-                logging.info(f"Unified number found in second URL: {uniNum}")
+            if len(searchDataWithCompanyName["items"]) > 1:
+                companyNameUrl = searchDataWithCompanyName["items"][1].get("formattedUrl", "")
+                parsed_query = parse_qs(urlparse(companyNameUrl).query)
+                if "no" in parsed_query:
+                    uniNum = parsed_query["no"][0]
+                else:
+                    uniNum = -1
             else:
                 uniNum = -1
-                logging.warning("No unified number found in either URL")
-                
+                    
         logging.info(f"Returning unified number: {uniNum}")
         return uniNum
         
@@ -114,8 +119,14 @@ def findUniNum(domain:str, companyName:str=None):
         # find the most relevant website related to the domain
         # use the title of the website as the company name
         # both domain and company name are not reliable though
-        searchWebsiteRelatedToDomain = f"https://www.googleapis.com/customsearch/v1?q={domain}&key={engine_api}&cx={search_id}"
-        searchResult = json.loads(requests.get(searchWebsiteRelatedToDomain,headers=headers).text)["items"]
+        logging.info(f"Searching for uniNum with domain: {domain}")
+        logging.info(f"Searching for website related to domain: {domain}")
+        searchWebsiteRelatedToDomain = f"https://www.googleapis.com/customsearch/v1?q={domain}&key={engine_api}&cx={search_whole_net}"
+        searchResult = json.loads(requests.get(searchWebsiteRelatedToDomain,headers=headers).text).get("items", [])
+        
+        if searchResult == []:
+            logging.warning(f"No search results found for domain: {domain}")
+            return -1
         
         websiteTitle = []
         for index, item in enumerate(searchResult):
@@ -123,31 +134,41 @@ def findUniNum(domain:str, companyName:str=None):
                 break
             websiteTitle.append(item["title"])
         
+        logging.info(f"Extracted website titles: {websiteTitle}")
         query = long_substr(websiteTitle)
         
-        # if tiltle doesn't exist enough time, use the domain to query
-        if query[1] <= 2:
+        # if title doesn't exist enough time, use the domain to query
+        if isinstance(query, tuple) and query[1] <= 2:
+            logging.info("Using domain as query due to insufficient common substring")
             query = domain
-        else :
+        elif isinstance(query, tuple):
+            logging.info(f"Using common substring as query: {query[0]}")
             query = query[0]
+        else:
+            logging.warning("Unexpected result from long_substr, using domain as fallback")
+            query = domain  # Fallback in case long_substr returns unexpected type
 
+        logging.info(f"Final query for company search: {query}")
         # Utilize 台灣公司網 to get uninum -> 利用公司名稱以及域名來搜尋
         searchWithCompanyName = f"https://www.googleapis.com/customsearch/v1?q={query}&key={engine_api}&cx={search_num_id}"
 
         # query 台灣公司網 for result, and extract the num at the end of 台灣公司網 url
-        searchDataWithCompanyName = json.loads(requests.get(searchWithCompanyName,headers=headers).text)
+        searchDataWithCompanyName = json.loads(requests.get(searchWithCompanyName, headers=headers).text)
         try: 
             nameUrl = searchDataWithCompanyName["items"][0]["formattedUrl"] 
-        except:
-           uniNum = -1
-                  
-        uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
+            logging.info(f"Found company URL: {nameUrl}")
+            uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
+            logging.info(f"Extracted unified number: {uniNum}")
+        except (IndexError, KeyError) as e:
+            logging.error(f"Error parsing nameUrl: {e}")
+            uniNum = -1
         
         return uniNum
                 
     except Exception as e:
-        print(e)
+        logging.error("Error in findUniNum:", exc_info=True)
     
+    logging.warning(f"Returning default uniNum: {uniNum}")
     return uniNum
         
 def request_to_biz(uniNum):
@@ -167,13 +188,13 @@ def request_to_biz(uniNum):
                 return content
             
     except requests.exceptions.ConnectionError as e:
-        print('ConnectionError: ', e)
+        print('At line 170: ConnectionError: ', e)
         return {}
     except json.JSONDecodeError as e:
-        print(f'JSONDecodeError: {e}')
+        print(f'At line 172: JSONDecodeError: {e}')
         return {}
     except Exception as e:
-        print(f'Unhandled Exception: {e}')
+        print(f'At line 174: Unhandled Exception: {e}')
         return {}
     
 def findbiz(url:str, companyName:str=None, num=None):
@@ -193,12 +214,9 @@ def findbiz(url:str, companyName:str=None, num=None):
          return request_to_biz(num)[0]
      
     logging.info(f"findbiz companyName: {companyName}")
-    if companyName:
-        logging.info(f"Searching for uniNum with domain: {domain} and companyName: {companyName}")
+    if companyName:        
         uniNum = findUniNum(domain, companyName)
-        logging.info(f"Found uniNum: {uniNum}")
         result = request_to_biz(uniNum)[0]
-        logging.info(f"Business info result: {result}")
         return result
     
     try:       
@@ -211,28 +229,14 @@ def findbiz(url:str, companyName:str=None, num=None):
         return result
     except ValueError as e: 
         # Handle specific ValueError exceptions
-        print("ValueError:", e)
+        print("At line 180: ValueError:", e)
         return {}
     except Exception as e: 
         # Handle any other exceptions
-        print('Other exception:', e)    
-        return {}
-    except Exception as e:
-        # Catch any unexpected exceptions
-        print(e)
+        print('At line 183: Other exception:', e)    
         return {}
 
-# print(findbiz("momoshop.com.tw")) # momo 
-# print(findbiz("gvm.com.tw/")) # 遠見雜誌 
-# print(findbiz("cht.com.tw")) # 中華電信
-# print(findbiz("bnext.com.tw")) # 數位時代
-# print(findbiz("nccc.com.tw")) # 財團法人聯合信用卡處理中心全球資訊網 
-# print(findbiz("104.com.tw")) # 104 
-# print(findbiz("591.com.tw")) # 591
-# print(findbiz("1111.com.tw")) # 1111
-# print(findbiz("www.esunbank.com")) # 1111
 
-#print(findbiz("https://www.104.com.tw/"))
 
 if __name__ == "__main__":
-    print(findbiz("https://www.dbs.com.tw/personal-zh/default.page", "DBS Bank Ltd"))
+    print(findbiz("https://www.dbs.com.tw/personal-zh/default.page", "DBS Bank Ltd")) 
