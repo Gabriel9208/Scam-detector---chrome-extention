@@ -11,8 +11,8 @@ export const Whois = () => {
                 <div>正在載入 Whois 資料...</div>
             ) : error ? (
                 <div>載入錯誤</div>
-            ) : !whoisInfo ? (
-                <span></span>
+            ) : !whoisInfo || Object.keys(whoisInfo).length === 0 ? (
+                <span>沒有找到 Whois 資訊</span>
             ) : (
                 Object.entries(whoisInfo).map(([key, value]) => (
                     <div key={key}>

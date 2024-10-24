@@ -11,8 +11,8 @@ export const TLS = () => {
                 <div>正在載入 TLS 資訊...</div>
             ) : error ? (
                 <div>載入錯誤</div>
-            ) : !tlsInfo ? (
-                <span></span>
+            ) : !tlsInfo || Object.keys(tlsInfo).length === 0 ? (
+                <span>沒有找到 TLS 資訊</span>
             ) : (
                 <div>
                     {tlsInfo.subject && (
