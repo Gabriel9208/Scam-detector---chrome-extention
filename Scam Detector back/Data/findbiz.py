@@ -155,10 +155,11 @@ def findUniNum(domain:str, companyName:str=None):
         # query 台灣公司網 for result, and extract the num at the end of 台灣公司網 url
         searchDataWithCompanyName = json.loads(requests.get(searchWithCompanyName, headers=headers).text)
         try: 
-            nameUrl = searchDataWithCompanyName["items"][0]["formattedUrl"] 
-            logging.info(f"Found company URL: {nameUrl}")
-            uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
-            logging.info(f"Extracted unified number: {uniNum}")
+            if "items" in searchDataWithCompanyName:
+                nameUrl = searchDataWithCompanyName["items"][0]["formattedUrl"] 
+                logging.info(f"Found company URL: {nameUrl}")
+                uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
+                logging.info(f"Extracted unified number: {uniNum}")
         except (IndexError, KeyError) as e:
             logging.error(f"Error parsing nameUrl: {e}")
             uniNum = -1
@@ -239,4 +240,4 @@ def findbiz(url:str, companyName:str=None, num=None):
 
 
 if __name__ == "__main__":
-    print(findbiz("https://www.dbs.com.tw/personal-zh/default.page", "DBS Bank Ltd")) 
+    print(findbiz("https://eyusunbmk.top")) 

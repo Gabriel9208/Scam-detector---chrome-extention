@@ -105,7 +105,7 @@ export const Detail = ({ url }) => {
                 }
             } catch (err) {
                 console.error(`Error fetching ${endpoint}:`, err);
-                setter({ error: err.response?.data?.detail || err.message });
+                setter({});
             }
         };
 

@@ -71,7 +71,7 @@ export const SidePanel = () => {
     if (e.key === 'Enter') {
       handleSubmit();
     }
-  }, [handleSubmit]);
+  }, [handleSubmit]); 
 
   return (
     <main>
@@ -83,7 +83,7 @@ export const SidePanel = () => {
           type="text" 
           placeholder="Enter URL" 
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => setUrl(e.target.value)}
           onKeyDown={handleKeyDown}
         />
         <button onClick={handleSubmit}>Analyze</button>
@@ -101,4 +101,4 @@ export const SidePanel = () => {
   )
 }
 
-export default SidePanel
+export default SidePanel;

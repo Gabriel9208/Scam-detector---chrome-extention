@@ -11,8 +11,8 @@ export const Business = () => {
                 <div>正在載入公司登記記錄...</div>
             ) : error ? (
                 <div>載入錯誤</div>
-            ) : !businessInfo ? (
-                <span></span>
+            ) : !businessInfo || Object.keys(businessInfo).length === 0 ? (
+                <span>沒有找到該公司在台灣登記的相關資訊</span>
             ) : (
                 Object.entries(businessInfo).map(([key, value]) => (
                     <div key={key}>

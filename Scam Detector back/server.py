@@ -91,8 +91,7 @@ async def web_content(url: Url):
         logging.info(f"Received Web Content request for URL: {url.url}")
         result = await asyncio.to_thread(scraper, url.url)
         if not result:
-            logging.warning(f"No web content found for {url.url}")
-            raise HTTPException(status_code=404, detail="Web content not found.")
+            result = {}
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))
     except Exception as e:
         logging.error(f"Error in Web Content endpoint: {str(e)}")

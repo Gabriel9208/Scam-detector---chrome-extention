@@ -3,17 +3,16 @@ import { GlobalContext } from '../SidePanel.jsx';
 
 import axios from 'axios';
 
-// Export the scoreContributions object
 export const scoreContributions = {
   domainExpired: 2,
   tlsExpired: 2,
-  inPhishDB: 2,
+  inPhishDB: 10,
   isDomainExpiringSoon: 0.5,
   isTLSExpiringSoon: 0.5,
-  caStatus: 2,
+  caStatus: 1,
   isDomainNew: 0.5,
   businessInfo: 1,
-  pageInfo: 1,
+  pageInfo: 0.5,
   tlsInfo: 1,
   whoisInfo: 1
 };
@@ -228,7 +227,7 @@ export const Analysis = ({ url }) => {
           {tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? <p>TLS 資訊可用。</p> : <p>警告: 找不到 TLS 資訊。</p>}
           {whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? <p>Whois 資訊可用。</p> : <p>警告: 找不到 Whois 資訊。</p>}
           {businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? <p>Business 資訊可用。</p> : <p>警告: 找不到 Business 資訊。</p>}
-          {pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? <p>Page 資訊可用。</p> : <p>警告: 找不到 Page 資訊。</p>}
+          {pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? <p>Page 資訊可用。</p> : <p>小心: 找不到 Page 資訊。</p>}
         </div>
       </div>
     </div>

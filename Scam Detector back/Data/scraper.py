@@ -24,23 +24,21 @@ re_rules = {
          
             
 def extract_info(category: str, html: list[str]):     
-    result = None
+    result = []
     for _, regex in re_rules[category].items():
         for line in html:
             match_obj = regex.search(line)
             if match_obj:
-                result = match_obj.group(0)
-                return result                
-            
+                result.append(match_obj.group(0))
     return result
 
 keys = {
         'addr': ['市', '縣'], 
-        'tel': ['客服', '專線', '電話', '市話', '專線'],
+        'tel': ['客服', '專線', '電話', '市話', '聯繫'],
         'phone': ['手機'],
-        'fax': ['傳真', 'fax', 'Fax'],
+        'fax': ['傳真', 'fax', 'Fax', '聯繫'],
         'num': ['統編', '統一編號'],
-        'mail': ['信箱', 'mail', 'email', '郵件'],
+        'mail': ['信箱', 'mail', 'email', '郵件', '聯繫'],
         'Food Business Registration No.': ['食品業']
         }
 
@@ -104,21 +102,30 @@ def process_footer_element(html: str, key_index):
             key = keys['Food Business Registration No.'][0]
             category = 'Food Business Registration No.'
     
-    matches = re.finditer(key, html)
+    matches = re.findall(key, html)
 
     for match in matches:
-        match_start_index = match.start()
+        try:
+            match_start_index = html.index(match)
+        except ValueError:
+            # Handle the case where the match is not found
+            match_start_index = -1  # or some other appropriate value
+            # You might also want to log this or take some other action
+        
         valid_content = html[match_start_index-2:]
         lines = valid_content.splitlines()
         
         retv = None
-        if 4 > len(lines):
+        if len(lines) < 4:
             retv = extract_info(category, lines)
         else:
             retv = extract_info(category, lines[:4])
             
         if retv:
-            info[category] = retv
+            if category not in info:
+                info[category] = []
+            # Add deduplication when extending the list
+            info[category].extend(list(set(retv)))
         else:
             info['null'] = 'NULL'
     
@@ -131,7 +138,7 @@ def scraper(url:str):
     try:
         # driver settings -> do not load images and use headless mode
         chromeOpt = webdriver.ChromeOptions()
-        chromeOpt.add_argument("--headless")
+        chromeOpt.add_argument("--headless=new")  # Updated headless flag
         chromeOpt.add_argument("--disable-gpu")
         chromeOpt.add_argument("--no-sandbox")
         chromeOpt.add_argument("--disable-dev-shm-usage")
@@ -171,14 +178,23 @@ def scraper(url:str):
             return {}
 
         with ThreadPoolExecutor(max_workers=18) as executor:
-                futures = [executor.submit(process_footer_element, footer, index) for index in range (18)]
-                for future in as_completed(futures):
-                    element_info = future.result()
-                    info.update(element_info)
+            futures = [executor.submit(process_footer_element, footer, index) for index in range (18)]
+            for future in as_completed(futures):
+                element_info = future.result()
+                if element_info:  # Check if element_info is not empty
+                    key, value = next(iter(element_info.items()))  # Get the single key-value pair
+                    if key in info:
+                        info[key] = list(set(info[key] + value))
+                    else:
+                        info[key] = value
                     
         if 'null' in info:
             info.pop('null')
             
+        for category in info:
+            if isinstance(info[category], list):
+                info[category] = list(dict.fromkeys(info[category]))
+        
         return info
     
     except Exception as e:
@@ -201,4 +217,4 @@ def scraper(url:str):
 #     pass
 
 if __name__ == "__main__":
-    print(scraper("https://shopee.tw/buyer/login?next=https%3A%2F%2Fshopee.tw%2F%3Fgad_source%3D1%26gclid%3DCj0KCQjwxsm3BhDrARIsAMtVz6OFhn-JzKCjJZtwlCLrJU7rnN1NufSfvzzZ-8ALkUfezMwYqHbvUaEaApX9EALw_wcB"))
+    print(scraper("https://www.dbs.com.tw/personal-zh/default.page"))

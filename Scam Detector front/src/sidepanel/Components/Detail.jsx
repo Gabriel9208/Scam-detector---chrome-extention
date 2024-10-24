@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useContext, useState } from 'react'
 import axios from 'axios';
 import { GlobalContext } from '../SidePanel.jsx';
 
+
 export const Detail = ({ url }) => {
     const { setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, loading, setLoading, error, setError } = useContext(GlobalContext);
 
@@ -91,7 +92,7 @@ export const Detail = ({ url }) => {
                 }
             } catch (err) {
                 console.error(`Error fetching ${endpoint}:`, err);
-                setter({ error: err.response?.data?.detail || err.message });
+                setter({});
             }
         };
 
@@ -117,13 +118,10 @@ export const Detail = ({ url }) => {
 
     return (
         <div>
-            <div>
-                <h2>詳細資訊</h2>
-                <Whois loading={loading} error={error} />
-                <TLS loading={loading} error={error} />
-                <Business loading={loading} error={error} />
-                <PageInfo loading={loading} error={error} />
-            </div>
+            <Whois loading={loading} error={error} />
+            <TLS loading={loading} error={error} />
+            <Business loading={loading} error={error} />
+            <PageInfo loading={loading} error={error} />
         </div>
     )
 }
