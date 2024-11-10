@@ -3,6 +3,9 @@ from selenium import webdriver
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 import threading
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 def close_driver(driver):
     driver.quit()
@@ -138,14 +141,26 @@ def scraper(url:str):
     try:
         # driver settings -> do not load images and use headless mode
         chromeOpt = webdriver.ChromeOptions()
-        chromeOpt.add_argument("--headless=new")  # Updated headless flag
+        chromeOpt.add_argument("--headless=new")  
         chromeOpt.add_argument("--disable-gpu")
         chromeOpt.add_argument("--no-sandbox")
         chromeOpt.add_argument("--disable-dev-shm-usage")
         chromeOpt.add_argument('--blink-settings=imagesEnabled=false')
+    
         
         driver = webdriver.Chrome(options=chromeOpt)
         driver.get(url)
+        
+        # Add wait for page load
+        wait = WebDriverWait(driver, 10)  # timeout after 10 seconds
+        wait.until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        
+        # Optional: Wait for network requests to complete
+        wait.until(
+            lambda driver: driver.execute_script('return document.readyState') == 'complete'
+        )
         
         info = {}
         soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -157,7 +172,7 @@ def scraper(url:str):
         footer = []
         
         # check if footer_element[0] is none
-        if not footer_element[0]:
+        if not len(footer_element) == 0:
             # find element with class or id include footer, because it may appear in many places, so don't grab the element following it
             footer_class_element = soup.find_all(class_=re.compile('footer'))
             footer_id_element = soup.find_all(id=re.compile('footer'))
@@ -165,7 +180,15 @@ def scraper(url:str):
             footer_element = list(set(footer_class_element + footer_id_element))
         else:
             # add the element below footer element
-            footer_sibling =  [elem.find_next_siblings() for elem in footer_element]
+            footer_sibling = []
+            for elem in footer_element:
+                # Get direct siblings
+                footer_sibling.extend(elem.find_next_siblings())
+                # Get children
+                footer_sibling.extend(elem.find_all())
+                # Get siblings' children
+                for sibling in elem.find_next_siblings():
+                    footer_sibling.extend(sibling.find_all())
             
             for elem in footer_sibling:
                 footer = footer + [e for e in elem]
@@ -217,4 +240,4 @@ def scraper(url:str):
 #     pass
 
 if __name__ == "__main__":
-    print(scraper("https://www.dbs.com.tw/personal-zh/default.page"))
+    print(scraper("https://www.momoshop.com.tw/ "))

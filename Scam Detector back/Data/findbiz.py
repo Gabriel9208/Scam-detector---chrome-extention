@@ -51,26 +51,49 @@ def long_substr(data):
                 continue
             count = sum(1 for s in data if substr in s)
             if count >= required_count and not contains_invalid_chars(substr) :
-                # 中文越長越好 英文次數出現越多越好 中文優先
+                # 中文越長越好 英文次數出現越多越長越好 中文優先
                 if all_chinese_chars(substr) and len(substr) > len(substring[0]):
                     substring = (substr, count, True)
                 elif not substring[2] and not all_chinese_chars(substr) and count > substring[1]:
                     substring = (substr, count, False)
-        
+                elif not substring[2] and not all_chinese_chars(substr) and len(substr) > len(substring[0]):
+                    substring = (substr, count, False)
     return substring
 
 def findUniNum(domain:str, companyName:str=None):
+    """
+    Find the unified business number (統一編號) for a company using domain name and/or company name.
+
+    Args:
+        domain (str): The domain name to search for
+        companyName (str, optional): The company name if known. Defaults to None.
+
+    Returns:
+        int: The unified business number if found, -1 if not found
+
+    The function uses Google Custom Search API to:
+    1. If company name provided:
+        - Search directly for the company name on 台灣公司網
+        - Extract unified number from search results
+    2. If only domain provided:
+        - Search for websites related to the domain
+        - Extract common substrings from website titles
+        - Use best substring to search 台灣公司網
+        - Extract unified number from search results
+
+    The function handles API quota limits and various error cases, returning -1 if no valid number found.
+    """
     load_dotenv()
     
     uniNum = -1
     
     # Custom Search JSON API
     engine_api = os.getenv('search_engine_api_key')
-    search_whole_net = "53af66ed5b0174cc7"
-    search_num_id = "80750484c968f42c8"
+    search_whole_net = os.getenv('find_num_search_id')
+    search_num_id = os.getenv('find_company_search_id')
     
     if companyName:
-        companyName = companyName.encode('utf-8').decode('unicode-escape')
+        #companyName = companyName.encode('utf-8').decode('unicode-escape')
         logging.info(f"decoded companyName: {companyName}")
         # reliable company name (from whois data or tls cert data)
         searchByCompanyName = f"https://www.googleapis.com/customsearch/v1?q={companyName}&key={engine_api}&cx={search_num_id}"
@@ -167,10 +190,8 @@ def findUniNum(domain:str, companyName:str=None):
         return uniNum
                 
     except Exception as e:
-        logging.error("Error in findUniNum:", exc_info=True)
+        return -1
     
-    logging.warning(f"Returning default uniNum: {uniNum}")
-    return uniNum
         
 def request_to_biz(uniNum):
     if uniNum == -1:
@@ -230,7 +251,7 @@ def findbiz(url:str, companyName:str=None, num=None):
         return result
     except ValueError as e: 
         # Handle specific ValueError exceptions
-        print("At line 180: ValueError:", e)
+        print("At line 252: ValueError:", e)
         return {}
     except Exception as e: 
         # Handle any other exceptions
@@ -240,4 +261,4 @@ def findbiz(url:str, companyName:str=None, num=None):
 
 
 if __name__ == "__main__":
-    print(findbiz("https://eyusunbmk.top")) 
+    print(findbiz("https://www.gamer.com.tw/", "旺普網路資訊股份有限公司 Oneup Network Corp")) 

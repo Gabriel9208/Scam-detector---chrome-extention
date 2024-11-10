@@ -10,7 +10,7 @@ import asyncio
 import traceback
 
 from Data.whoisInfo import searchWhois
-from Data.TLS_check import fetchTlsCert
+from Data.TLSCheck import fetchTlsCert
 from Data.findbiz import findbiz
 from Data.scraper import scraper
 

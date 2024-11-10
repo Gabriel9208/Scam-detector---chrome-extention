@@ -1,0 +1,2 @@
+url,total_risk_score,status,domainExpired,tlsExpired,inPhishDB,isDomainExpiringSoon,isTLSExpiringSoon,caStatus,isDomainNew,businessInfo,pageInfo,tlsInfo,whoisInfo
+https://www.businesstoday.com.tw/,0,success,0,0,0,0,0,0,0,0,0,0,0

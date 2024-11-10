@@ -7,12 +7,12 @@ from cryptography.hazmat.backends import default_backend
 import logging
 import socket
 import certifi
+# $env:OPENSSL_CONF='C:\Users\yen08\Desktop\scamDetector\Scam-detector---firefox-extention\Scam Detector back\Data\openssl.cnf'
 
 # Suppress only the single warning from urllib3 needed.
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
-
-def fetchTlsCert(url: str) -> dict:
-    headers = {
+print(ssl.OPENSSL_VERSION)
+headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
@@ -26,6 +26,32 @@ def fetchTlsCert(url: str) -> dict:
         'Cache-Control': 'max-age=0',
     }
 
+def fetchTlsCert(url: str) -> dict:
+    """
+    Fetches and extracts TLS certificate information for a given URL.
+
+    Args:
+        url (str): The URL to fetch the TLS certificate from
+
+    Returns:
+        dict: A dictionary containing the certificate information with fields like:
+            - subject: Certificate subject details
+            - issuer: Certificate issuer details 
+            - version: Certificate version
+            - serialNumber: Certificate serial number
+            - notBefore: Certificate validity start date
+            - notAfter: Certificate validity end date
+            - subjectAltName: Subject Alternative Names
+            - OCSP: OCSP URLs
+            - caIssuers: CA Issuer URLs
+            - crlDistributionPoints: CRL Distribution Points
+
+    The function first tries to connect using requests library. If that fails,
+    it falls back to creating a direct SSL connection. It then extracts all
+    relevant certificate information into a structured dictionary format.
+
+    If any error occurs during the process, it logs the error and returns an empty dict.
+    """
     try:
         logging.info(f"TLS: Fetching TLS certificate for URL: {url}")
         
@@ -40,9 +66,19 @@ def fetchTlsCert(url: str) -> dict:
             hostname = url.split('//')[1].split('/')[0]
 
         # Use ssl.create_default_context() with certifi
-        context = ssl.create_default_context(cafile=certifi.where())
+        context = ssl.create_default_context()
         context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE  # Be cautious with this in production!
+        context.verify_mode = ssl.CERT_NONE  
+
+        # Create a default SSL context
+        # context = ssl.create_default_context()
+
+        # Example: Set custom options or load certificates
+        # context.load_cert_chain(certfile='path/to/cert.pem', keyfile='path/to/key.pem')
+        # context.load_verify_locations(cafile='path/to/ca-bundle.crt')
+
+        # Example: Set SSL options
+        # context.options |= ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1  # Disable older TLS versions
 
         logging.info(f"TLS: Creating SSL connection to {hostname}")
         with socket.create_connection((hostname, 443)) as sock:
@@ -98,7 +134,7 @@ def fetchTlsCert(url: str) -> dict:
 
 # For testing
 if __name__ == "__main__":
-    test_url = "https://www.dbs.com.tw/personal-zh/default.page"
+    test_url = "https://www.hncb.com.tw/wps/portal/HNCB/"
     try:
         cert = fetchTlsCert(test_url)
         print(f"Certificate details for {test_url}:")

@@ -17,17 +17,16 @@ def urlToDomain(url: str) -> str:
 
 def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
     """
-    Retrieves the authoritative whois server for a given domain.
+    Gets the authoritative WHOIS server, domain name, and raw WHOIS data for a domain.
 
     Args:
-        domain (str): The domain name to query.
+        domain (str): The domain name to query
 
     Returns:
-        tuple: A tuple containing the whois server provided by the registrar,
-            the domain name itself, and the raw text output from the WHOIS query.
-
-    Raises:
-        ValueError: If the registrar WHOIS server is not found.
+        tuple[str, str, str]: A tuple containing:
+            - registrarWhoisServer: The authoritative WHOIS server for the domain
+            - domainName: The domain name extracted from WHOIS data
+            - rawWhois: The complete raw WHOIS response
     """
     rawWhois = whois.whois(domain).text
 
@@ -49,14 +48,17 @@ def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
 
 def queryWhoisServer(registrarWhois: str, queryDomain: str) -> str:
     """
-    Sends a WHOIS query to the specified registrar's WHOIS server and returns the response.
+    Query a WHOIS server for domain information.
 
     Args:
-        registrarWhois (str): The WHOIS server provided by the registrar.
-        queryDomain (str): The domain name to query.
+        registrarWhois (str): The WHOIS server hostname to query
+        queryDomain (str): The domain name to look up
 
     Returns:
-        str: The response from the WHOIS query.
+        str: The WHOIS response text, cleaned of any trailing data after '>'
+
+    Raises:
+        SystemExit: If the TCP connection fails
     """
     response = b""
     try:
@@ -80,15 +82,6 @@ def queryWhoisServer(registrarWhois: str, queryDomain: str) -> str:
     return cleanedResponse
             
 def toJson(whoisData: str) -> dict:
-    """
-    Convert WHOIS data to a JSON object.
-
-    Args:
-        whoisData (str): The raw WHOIS data.
-
-    Returns:
-        dict: A JSON object containing the parsed WHOIS data.
-    """
     whoisLines = whoisData.split('\n')
     whoisDict = {}
     currentKey = None
@@ -129,32 +122,37 @@ def toJson(whoisData: str) -> dict:
     
 def searchWhois(url: str) -> dict:
     """
-    Searches WHOIS information for a given URL and returns the results in JSON format.
-
+    Search WHOIS information for a given URL.
+    
     Args:
-        url (str): The URL to search WHOIS information for.
-
+        url (str): The URL to search WHOIS information for
+        
     Returns:
-        dict: A dictionary containing the parsed WHOIS information.
+        dict: A dictionary containing the parsed WHOIS information with fields like:
+            - Domain Name
+            - Creation Date 
+            - Expiration Date
+            - Registrar
+            - etc.
+            
+    The function first extracts the domain from the URL, then queries the authoritative 
+    WHOIS server if available, otherwise uses the raw WHOIS data. The WHOIS data is 
+    then parsed into a structured dictionary format.
     """
     domain = urlparse(url).netloc 
     
     whoisServer, domainName, rawWhois = getAuthoritativeWhoisServer(domain) 
     whoisData = None
-
+    
     if whoisServer:
-        whoisData = queryWhoisServer(whoisServer, domainName)
+        try:
+            whoisData = queryWhoisServer(whoisServer, domainName)
+        except Exception as e:
+            logging.error(f"Error querying WHOIS server: {e}")
+            whoisData = rawWhois
     else:
         whoisData = rawWhois
 
     whoisJson = toJson(whoisData)
     
     return whoisJson
-
-#searchWhois("https://www.momoshop.com.tw/main/Main.jsp")
-# searchWhois("https://mfa.zyv.mybluehost.me/")
-'''
-whois server:
-    whois.gandi.net
-    
-'''

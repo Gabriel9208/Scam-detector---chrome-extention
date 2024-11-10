@@ -1,0 +1,3 @@
+url,risk_score,status,details
+https://example.com,0.5,success,"{'whois': True, 'tls': True, 'business': True, 'page': False, 'in_phish_db': False}"
+https://google.com,2.5,success,"{'whois': False, 'tls': True, 'business': True, 'page': False, 'in_phish_db': False}"
