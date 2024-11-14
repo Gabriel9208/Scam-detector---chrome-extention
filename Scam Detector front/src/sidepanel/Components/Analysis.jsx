@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { GlobalContext } from '../SidePanel.jsx';
+import { GlobalContext } from '../GlobalProvider.jsx';
 
 import axios from 'axios';
 
@@ -206,10 +206,14 @@ export const Analysis = ({ url }) => {
         <div className='indent-container'>
           {domainExpired && <p>惡意: 域名已過期。</p>}
           {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
-          {!domainExpired && !tlsExpired &&
+          {whoisInfo && !domainExpired &&
             <>
               <p>域齡: 已建立 {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
               <p>域名到期日: 還剩{daysUntilExpiration}天過期 {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
+            </>
+          }
+          {tlsInfo && !tlsExpired &&
+            <>
               <p>TLS 證書到期日: 還剩{daysUntilTLSExpiration}天過期 {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }

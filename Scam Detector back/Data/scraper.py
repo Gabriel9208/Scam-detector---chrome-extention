@@ -7,6 +7,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
+chromeOpt = webdriver.ChromeOptions()
+chromeOpt.add_argument("--headless=new")  
+chromeOpt.add_argument("--disable-gpu")
+chromeOpt.add_argument("--no-sandbox")
+chromeOpt.add_argument("--disable-dev-shm-usage")
+chromeOpt.add_argument('--blink-settings=imagesEnabled=false')
+    
+        
+driver = webdriver.Chrome(options=chromeOpt)
+
 def close_driver(driver):
     driver.quit()
 
@@ -21,7 +31,7 @@ re_rules = {
                   '0809': re.compile(r'0809(-| |&nbsp;)*\d{3}(-| |&nbsp;)*\d{3}')},
         'fax': {'fax': re.compile(r'(\(0\d\)|0\d)(-| |&nbsp;)*\d{4}(-| |&nbsp;)*\d{4}')},
         'num': {'num': re.compile(r'\d{8}'),},
-        'mail': {'email': re.compile(r'[A-Za-z][a-zA-Z\-\.]+@([a-zA-Z\-]+\.)+[a-zA-Z\-]{2,4}')},
+        'mail': {'email': re.compile(r'[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}')},
         'Food Business Registration No.': {'food': re.compile(r'[A-Z]-\d{9,9}-\d{5,5}-\d')}
     }
          
@@ -140,15 +150,15 @@ def scraper(url:str):
     
     try:
         # driver settings -> do not load images and use headless mode
-        chromeOpt = webdriver.ChromeOptions()
-        chromeOpt.add_argument("--headless=new")  
-        chromeOpt.add_argument("--disable-gpu")
-        chromeOpt.add_argument("--no-sandbox")
-        chromeOpt.add_argument("--disable-dev-shm-usage")
-        chromeOpt.add_argument('--blink-settings=imagesEnabled=false')
+        # chromeOpt = webdriver.ChromeOptions()
+        # chromeOpt.add_argument("--headless=new")  
+        # chromeOpt.add_argument("--disable-gpu")
+        # chromeOpt.add_argument("--no-sandbox")
+        # chromeOpt.add_argument("--disable-dev-shm-usage")
+        # chromeOpt.add_argument('--blink-settings=imagesEnabled=false')
     
         
-        driver = webdriver.Chrome(options=chromeOpt)
+        # driver = webdriver.Chrome(options=chromeOpt)
         driver.get(url)
         
         # Add wait for page load
@@ -165,7 +175,7 @@ def scraper(url:str):
         info = {}
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         
-        threading.Thread(target=close_driver, args=(driver,)).start()
+        # threading.Thread(target=close_driver, args=(driver,)).start()
         
         # grab footer from the page
         footer_element = [soup.find('footer')]
@@ -240,4 +250,4 @@ def scraper(url:str):
 #     pass
 
 if __name__ == "__main__":
-    print(scraper("https://www.momoshop.com.tw/ "))
+    print(scraper("https://www.liketeashop.com/"))

@@ -52,7 +52,9 @@ def long_substr(data):
             count = sum(1 for s in data if substr in s)
             if count >= required_count and not contains_invalid_chars(substr) :
                 # 中文越長越好 英文次數出現越多越長越好 中文優先
-                if all_chinese_chars(substr) and len(substr) > len(substring[0]):
+                if all_chinese_chars(substr) and count > substring[1]:
+                    substring = (substr, count, True)
+                elif all_chinese_chars(substr) and count == substring[1] and len(substr) > len(substring[0]):
                     substring = (substr, count, True)
                 elif not substring[2] and not all_chinese_chars(substr) and count > substring[1]:
                     substring = (substr, count, False)
@@ -60,6 +62,11 @@ def long_substr(data):
                     substring = (substr, count, False)
     return substring
 
+def filterCompanyName(companyName:str):
+    if re.search(r'[\u4e00-\u9fff]', companyName):
+        companyName = re.sub(r'[^\u4e00-\u9fff ]', '', companyName)
+    return companyName
+    
 def findUniNum(domain:str, companyName:str=None):
     """
     Find the unified business number (統一編號) for a company using domain name and/or company name.
@@ -93,7 +100,7 @@ def findUniNum(domain:str, companyName:str=None):
     search_num_id = os.getenv('find_company_search_id')
     
     if companyName:
-        #companyName = companyName.encode('utf-8').decode('unicode-escape')
+        companyName = filterCompanyName(companyName)
         logging.info(f"decoded companyName: {companyName}")
         # reliable company name (from whois data or tls cert data)
         searchByCompanyName = f"https://www.googleapis.com/customsearch/v1?q={companyName}&key={engine_api}&cx={search_num_id}"
@@ -184,8 +191,14 @@ def findUniNum(domain:str, companyName:str=None):
                 uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
                 logging.info(f"Extracted unified number: {uniNum}")
         except (IndexError, KeyError) as e:
-            logging.error(f"Error parsing nameUrl: {e}")
-            uniNum = -1
+            try:
+                # If "no" parameter not found, try getting from the second search result
+                nameUrl = searchDataWithCompanyName["items"][1]["formattedUrl"]
+                uniNum = parse_qs(urlparse(nameUrl).query)["no"][0]
+                logging.info(f"Extracted unified number from second result: {uniNum}")
+            except (KeyError, IndexError) as e:
+                logging.error(f"Failed to extract unified number: {e}")
+                uniNum = -1
         
         return uniNum
                 
@@ -261,4 +274,4 @@ def findbiz(url:str, companyName:str=None, num=None):
 
 
 if __name__ == "__main__":
-    print(findbiz("https://www.gamer.com.tw/", "旺普網路資訊股份有限公司 Oneup Network Corp")) 
+    print(findbiz("https://macutea.com.tw/")) 

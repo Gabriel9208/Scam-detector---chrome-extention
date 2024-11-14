@@ -124,3 +124,38 @@ h3 {
 .toggle-content {
   margin-left: 20px;
 }
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* Allow children to stretch to full width */
+  width: 100%; /* Ensure the container takes full width */
+}
+
+.input-container input[type="text"] {
+  width: 100%; /* Make the input take full width */
+  box-sizing: border-box; /* Include padding and border in the element's total width */
+}
+
+.toggle-section {
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.toggle-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.toggle-icon {
+  display: inline-block;
+  margin-right: 10px;
+  transition: transform 0.3s ease;
+}
+
+.toggle-icon.open {
+  transform: rotate(90deg);
+}

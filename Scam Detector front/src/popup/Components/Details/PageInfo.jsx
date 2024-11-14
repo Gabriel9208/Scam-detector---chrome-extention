@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { GlobalContext } from '../../Popup.jsx'
+import { GlobalContext } from '../../GlobalProvider.jsx'
 
 export const PageInfo = () => {
     const { pageInfo, loading, error } = useContext(GlobalContext);

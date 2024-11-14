@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { Popup } from './Popup'
+import { GlobalProvider } from './GlobalProvider.jsx'
 import './index.css'
 
 // The following of the file brings all the pieces together 
@@ -8,6 +9,8 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('app')).render(
   <React.StrictMode>
-    <Popup />
+    <GlobalProvider>
+      <Popup />
+    </GlobalProvider>
   </React.StrictMode>,
 )

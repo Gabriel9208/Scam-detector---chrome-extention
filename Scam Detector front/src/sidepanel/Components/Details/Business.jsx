@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { GlobalContext } from '../../SidePanel.jsx'
+import { GlobalContext } from '../../GlobalProvider.jsx'
 
 export const Business = () => {
     const { businessInfo, loading, error } = useContext(GlobalContext);

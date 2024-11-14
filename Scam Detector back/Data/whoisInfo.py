@@ -2,6 +2,8 @@ import socket
 import whois
 from urllib.parse import urlparse
 import logging
+import time
+import signal
 
 def urlToDomain(url: str) -> str:
     subDomain = urlparse(url).netloc
@@ -29,7 +31,7 @@ def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
             - rawWhois: The complete raw WHOIS response
     """
     rawWhois = whois.whois(domain).text
-
+    time.sleep(1)
     registrarWhoisServer = None
     domainName = None
 
@@ -146,13 +148,22 @@ def searchWhois(url: str) -> dict:
     
     if whoisServer:
         try:
+            logging.info(f"Querying WHOIS server: {whoisServer}")
             whoisData = queryWhoisServer(whoisServer, domainName)
+            
+            if whoisData == {}:
+                whoisData = rawWhois
         except Exception as e:
-            logging.error(f"Error querying WHOIS server: {e}")
+            logging.info(f"Error querying WHOIS server: {e}")
             whoisData = rawWhois
     else:
         whoisData = rawWhois
+    
 
     whoisJson = toJson(whoisData)
     
+    logging.info(f"WHOIS data: {whoisJson}")
     return whoisJson
+
+if __name__ == "__main__":
+    print(searchWhois("https://tw.yahoo.com/"))

@@ -7,7 +7,6 @@ from cryptography.hazmat.backends import default_backend
 import logging
 import socket
 import certifi
-# $env:OPENSSL_CONF='C:\Users\yen08\Desktop\scamDetector\Scam-detector---firefox-extention\Scam Detector back\Data\openssl.cnf'
 
 # Suppress only the single warning from urllib3 needed.
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)

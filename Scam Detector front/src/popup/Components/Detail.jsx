@@ -4,7 +4,7 @@ import { TLS } from './Details/TLS.jsx'
 import { Business } from './Details/Business.jsx'
 import React, { useEffect, useMemo, useContext, useState } from 'react'
 import axios from 'axios';
-import { GlobalContext } from '../Popup.jsx';
+import { GlobalContext } from '../GlobalProvider.jsx';
 
 const ToggleSection = ({ title, children }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -50,8 +50,9 @@ export const Detail = ({ url }) => {
         }
 
         let orgName = "";
-        const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy"]
+        const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy", "Prohibited", "Fail"]
         const fetchEndpoint = async (endpoint, setter, ...args) => {
+            const startTime = Date.now();
             try {
                 if(endpoint === 'findbiz'){
                     console.log("findbiz orgName:", orgName);
@@ -64,6 +65,9 @@ export const Detail = ({ url }) => {
                 else{
                     response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url });
                 }
+
+                const duration = Date.now() - startTime;
+                console.log(`${endpoint} request took ${duration}ms`);
 
                 if (("details" in response.data && (response.data.details.includes("404") || response.data.details.includes("500"))) ||
                 ("detail" in response.data && (response.data.detail.includes("404") || response.data.detail.includes("500"))) ||
@@ -104,6 +108,8 @@ export const Detail = ({ url }) => {
                     }
                 }
             } catch (err) {
+                const duration = Date.now() - startTime;
+                console.log(`${endpoint} request took ${duration}ms`);
                 console.error(`Error fetching ${endpoint}:`, err);
                 setter({});
             }

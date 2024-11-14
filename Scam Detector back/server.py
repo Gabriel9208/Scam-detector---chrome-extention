@@ -17,6 +17,8 @@ from Data.scraper import scraper
 from Analysis.IsWellKnownCA import isTrustedCA
 from Analysis.checkPhishDB import checkPhishDB
 
+from asyncio import TimeoutError
+
 # Configure logging to a file
 logging.basicConfig(
     level=logging.INFO,
@@ -54,8 +56,14 @@ class URLRequest(BaseModel):
 async def whois(url: Url):
     try:
         logging.info(f"Received WHOIS request for URL: {url.url}")
-        result = searchWhois(url.url)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(searchWhois, url.url),
+            timeout=15.0
+        )
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+    except TimeoutError:
+        logging.warning(f"WHOIS request timed out for URL: {url.url}")
+        return JSONResponse(content={"error": "Timeout"})
     except Exception as e:
         logging.error(f"Error in WHOIS endpoint: {str(e)}")
         return JSONResponse(
@@ -68,11 +76,17 @@ async def whois(url: Url):
 async def findBizRegistration(request: FindBizRequest):
     try:
         logging.info(f"Received FindBiz request for URL: {request.url} and Organization: {request.organizationName}")
-        result = await asyncio.to_thread(findbiz, request.url, request.organizationName)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(findbiz, request.url, request.organizationName),
+            timeout=15.0
+        )
         if result == {}:
             logging.warning(f"No business registration found for {request.url}")
             raise HTTPException(status_code=404, detail="Business registration not found or reached the limit quota.")
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+    except TimeoutError:
+        logging.warning(f"FindBiz request timed out for URL: {request.url}")
+        return JSONResponse(content={"error": "Timeout"})
     except Exception as e:
         logging.error(f"Error in FindBiz endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -80,19 +94,35 @@ async def findBizRegistration(request: FindBizRequest):
 
 @app.post("/scam-detector/detail/tls/")
 async def tls(url: Url):
-    logging.info(f"Received TLS request for URL: {url.url}")
-    result = await asyncio.to_thread(fetchTlsCert, url.url)
-    return JSONResponse(content=json.loads(json.dumps(result, default=str)))  # Ensure JSON response
+    try:
+        logging.info(f"Received TLS request for URL: {url.url}")
+        result = await asyncio.wait_for(
+            asyncio.to_thread(fetchTlsCert, url.url),
+            timeout=15.0
+        )
+        return JSONResponse(content=json.loads(json.dumps(result, default=str)))  # Ensure JSON response
+    except TimeoutError:
+        logging.warning(f"TLS request timed out for URL: {url.url}")
+        return JSONResponse(content={"error": "Timeout"})
+    except Exception as e:
+        logging.error(f"Error in TLS endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/scam-detector/detail/web-content/")
 async def web_content(url: Url):
     try:
         logging.info(f"Received Web Content request for URL: {url.url}")
-        result = await asyncio.to_thread(scraper, url.url)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(scraper, url.url),
+            timeout=15.0
+        )
         if not result:
             result = {}
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))
+    except TimeoutError:
+        logging.warning(f"Web Content request timed out for URL: {url.url}")
+        return JSONResponse(content={"error": "Timeout"})
     except Exception as e:
         logging.error(f"Error in Web Content endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -102,9 +132,15 @@ async def web_content(url: Url):
 async def check_ca(request: CARequest):
     try:
         logging.info(f"Received CA: /{request.ca}/")
-        result = await asyncio.to_thread(isTrustedCA, request.ca)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(isTrustedCA, request.ca),
+            timeout=15.0
+        )
         logging.info(f"CA No HTTPException: {result}")
         return JSONResponse(content={"result": result})  # Ensure JSON response
+    except TimeoutError:
+        logging.warning(f"CA request timed out for CA: {request.ca}")
+        return JSONResponse(content={"error": "Timeout"})
     except HTTPException as http_exc:
         logging.info(f"CA HTTPException: {http_exc}")
         raise http_exc
@@ -117,8 +153,14 @@ async def check_ca(request: CARequest):
 async def check_phish(request: URLRequest):
     try:
         logging.info(f"Received PhishDB request for URL: {request.url}")
-        result = await asyncio.to_thread(checkPhishDB, request.url)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(checkPhishDB, request.url),
+            timeout=15.0
+        )
         return JSONResponse(content={"result": result})  # Ensure JSON response
+    except TimeoutError:
+        logging.warning(f"PhishDB request timed out for URL: {request.url}")
+        return JSONResponse(content={"error": "Timeout"})
     except HTTPException as http_exc:
         logging.info(f"PhishDB HTTPException: {http_exc}")
         raise http_exc

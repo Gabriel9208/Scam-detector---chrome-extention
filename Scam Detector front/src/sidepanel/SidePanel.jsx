@@ -1,46 +1,19 @@
-import { useState, createContext, useMemo, useCallback, useEffect } from 'react'
+import { useState, useContext, useCallback, useEffect } from 'react'
 import {Result} from './Components/Result.jsx'
 import {Analysis} from './Components/Analysis.jsx'
 import {Detail} from './Components/Detail.jsx'
-
 import './SidePanel.css'
+import { GlobalContext } from './GlobalProvider.jsx'
 
-// result - easy, single line
-// analysis - in 10 lines
-// details - show each field result
+export const SidePanel = () => {
+  const [url, setUrl] = useState('');
+  const [submitUrl, setSubmitUrl] = useState('');
+  const [showThreshold, setShowThreshold] = useState(false);
 
-export const GlobalContext = createContext();
+  // Access setThreshold and threshold from GlobalContext
+  const { threshold, setThreshold, setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, 
+                      setRiskScore, setLoading, setError, setInPhishDB } = useContext(GlobalContext);
 
-const GlobalProvider = ({ children, url }) => {
-  const [whoisInfo, setWhoisInfo] = useState(null);
-  const [tlsInfo, setTlsInfo] = useState(null);
-  const [businessInfo, setBusinessInfo] = useState(null);
-  const [pageInfo, setPageInfo] = useState(null);
-  const [riskScore, setRiskScore] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [inPhishDB, setInPhishDB] = useState(false);
-
-  const contextValue = useMemo(() => ({
-    whoisInfo,
-    setWhoisInfo,
-    tlsInfo,
-    setTlsInfo,
-    businessInfo,
-    setBusinessInfo,
-    pageInfo,
-    setPageInfo,
-    riskScore,
-    setRiskScore,
-    inPhishDB,
-    setInPhishDB,
-    loading,
-    setLoading,
-    error,
-    setError
-  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB]);
-
-  // Reset all states when url changes
   useEffect(() => {
     setWhoisInfo(null);
     setTlsInfo(null);
@@ -52,17 +25,6 @@ const GlobalProvider = ({ children, url }) => {
     setInPhishDB(false);
   }, [url]);
 
-  return (
-    <GlobalContext.Provider value={contextValue}>
-      {children}
-    </GlobalContext.Provider>
-  );
-};
-
-export const SidePanel = () => {
-  const [url, setUrl] = useState('');
-  const [submitUrl, setSubmitUrl] = useState('');
-
   const handleSubmit = useCallback(() => {
     setSubmitUrl(url);
   }, [url]);
@@ -72,6 +34,7 @@ export const SidePanel = () => {
       handleSubmit();
     }
   }, [handleSubmit]); 
+
 
   return (
     <main>
@@ -83,18 +46,50 @@ export const SidePanel = () => {
           type="text" 
           placeholder="Enter URL" 
           value={url}
-            onChange={(e) => setUrl(e.target.value)}
+          onChange={(e) => setUrl(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button onClick={handleSubmit}>Analyze</button>
+        <div className='toggle-section'>
+          <div className='toggle-header' onClick={() => setShowThreshold(!showThreshold)}>
+            <span className={`toggle-icon ${showThreshold ? 'open' : ''}`}>▶</span>
+            <span>嚴謹度調整</span>
+          </div>
+          {showThreshold && (
+            <div className='toggle-content threshold-container'>
+              <p style={{color: '#a7a7a7'}}>預設嚴謹度在普遍情況下最為合適，但您可以根據實際需求調整。</p>
+              <input 
+                type="radio" 
+                name="threshold" 
+                value={0.5} 
+                checked={threshold === 0.5}
+                onChange={(e) => setThreshold(parseFloat(e.target.value))}
+              />
+              <label>嚴謹</label>
+              <input 
+                type="radio" 
+                name="threshold" 
+                value={1} 
+                checked={threshold === 1}
+                onChange={(e) => setThreshold(parseFloat(e.target.value))}
+              />
+              <label>預設</label>
+              <input 
+                type="radio" 
+                name="threshold" 
+                value={1.5} 
+                checked={threshold === 1.5}
+                onChange={(e) => setThreshold(parseFloat(e.target.value))}
+              />              
+              <label>寬鬆</label>
+            </div>
+          )}
+        </div>
       </div>
       {submitUrl && (
         <div className='content-container'>
-          <GlobalProvider url={submitUrl}>
             <Result />
             <Analysis url={submitUrl}/>
             <Detail url={submitUrl}/>
-          </GlobalProvider>
         </div>
       )}
     </main>
