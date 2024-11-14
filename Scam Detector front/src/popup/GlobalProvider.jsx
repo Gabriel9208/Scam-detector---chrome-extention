@@ -11,7 +11,6 @@ export const GlobalProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [inPhishDB, setInPhishDB] = useState(false);
-  const [threshold, setThreshold] = useState(1);
 
   const contextValue = useMemo(() => ({
     whoisInfo,
@@ -30,9 +29,7 @@ export const GlobalProvider = ({ children }) => {
     setLoading,
     error,
     setError,
-    threshold,
-    setThreshold,
-  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB, threshold]);
+  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB]);
 
   return (
     <GlobalContext.Provider value={contextValue}>

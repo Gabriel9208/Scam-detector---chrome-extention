@@ -4,8 +4,8 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
 import { scoreContributions } from './Analysis.jsx'
 
-export const Result = () => {
-  const { riskScore, loading, error, threshold } = useContext(GlobalContext);
+export const Result = ({threshold}) => {
+  const { riskScore, loading, error } = useContext(GlobalContext);
 
   const color = useMemo(() => {
     if (riskScore > 2) return '#FF0000';
@@ -19,13 +19,21 @@ export const Result = () => {
     return '安全';
   }, [threshold, riskScore])
 
-  const maxScore = useMemo(() => {
-    return Object.values(scoreContributions).reduce((sum, value) => sum + value, 0);
-  }, []);
-
   const normalizedScore = useMemo(() => {
-    return 100 - (riskScore / maxScore) * 100;
-  }, [riskScore]);
+    let score;
+    if (riskScore > 2) {
+      score = 0; 
+    } else if (riskScore > threshold) {
+      const suspiciousRange = (2 - threshold);
+      const position = (2 - riskScore) / suspiciousRange;
+      score = 30 + (position * 30);
+    } else {
+      const position = (threshold - riskScore) / threshold;
+      score = 90 + (position * 15);
+    }
+    return Math.max(0, Math.min(100, score)); 
+  }, [riskScore, threshold]);
+    
 
   const renderContent = useMemo(() => {
     if (loading) {

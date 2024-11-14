@@ -9,9 +9,10 @@ export const SidePanel = () => {
   const [url, setUrl] = useState('');
   const [submitUrl, setSubmitUrl] = useState('');
   const [showThreshold, setShowThreshold] = useState(false);
+  const [threshold, setThreshold] = useState(1);
 
   // Access setThreshold and threshold from GlobalContext
-  const { threshold, setThreshold, setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, 
+  const { setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, 
                       setRiskScore, setLoading, setError, setInPhishDB } = useContext(GlobalContext);
 
   useEffect(() => {
@@ -35,6 +36,18 @@ export const SidePanel = () => {
     }
   }, [handleSubmit]); 
 
+  const handleCurrentUrl = useCallback(() => {
+    const getCurrentTab = async () => {
+      let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.url) {
+        console.log("Current URL:", tab.url);
+        setUrl(tab.url);
+        setSubmitUrl(tab.url)
+      }
+    };
+
+    getCurrentTab();
+  }, []);
 
   return (
     <main>
@@ -49,6 +62,7 @@ export const SidePanel = () => {
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={handleKeyDown}
         />
+        <button onClick={handleCurrentUrl}>分析當前網頁連結</button>
         <div className='toggle-section'>
           <div className='toggle-header' onClick={() => setShowThreshold(!showThreshold)}>
             <span className={`toggle-icon ${showThreshold ? 'open' : ''}`}>▶</span>
@@ -87,7 +101,7 @@ export const SidePanel = () => {
       </div>
       {submitUrl && (
         <div className='content-container'>
-            <Result />
+            <Result threshold={threshold} />
             <Analysis url={submitUrl}/>
             <Detail url={submitUrl}/>
         </div>
