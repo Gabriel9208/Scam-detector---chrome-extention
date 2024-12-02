@@ -131,15 +131,7 @@ def findUniNum(domain:str, companyName:str=None):
         if "no" in parsed_query:
             uniNum = parsed_query["no"][0]
         else:
-            if len(searchDataWithCompanyName["items"]) > 1:
-                companyNameUrl = searchDataWithCompanyName["items"][1].get("formattedUrl", "")
-                parsed_query = parse_qs(urlparse(companyNameUrl).query)
-                if "no" in parsed_query:
-                    uniNum = parsed_query["no"][0]
-                else:
-                    uniNum = -1
-            else:
-                uniNum = -1
+            uniNum = companyNameUrl[-8:-1]
                     
         logging.info(f"Returning unified number: {uniNum}")
         return uniNum
@@ -251,8 +243,11 @@ def findbiz(url:str, companyName:str=None, num=None):
     logging.info(f"findbiz companyName: {companyName}")
     if companyName:        
         uniNum = findUniNum(domain, companyName)
-        result = request_to_biz(uniNum)[0]
-        return result
+        if request_to_biz(uniNum):
+            result = request_to_biz(uniNum)[0]
+            return result
+        else:
+            return {}
     
     try:       
         logging.info(f"Searching for uniNum with domain: {domain}")
@@ -274,4 +269,4 @@ def findbiz(url:str, companyName:str=None, num=None):
 
 
 if __name__ == "__main__":
-    print(findbiz("https://macutea.com.tw/")) 
+    print(findbiz("https://www.cna.com.tw/", "財團法人中央通訊社 THE CENTRAL NEWS AGENCY ic")) 

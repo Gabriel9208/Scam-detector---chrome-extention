@@ -11,6 +11,7 @@ export const GlobalProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [inPhishDB, setInPhishDB] = useState(false);
+  const [fakeDomain, setFakeDomain] = useState(false);
 
   const contextValue = useMemo(() => ({
     whoisInfo,
@@ -28,8 +29,10 @@ export const GlobalProvider = ({ children }) => {
     loading,
     setLoading,
     error,
-    setError,
-  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB]);
+    setError, 
+    fakeDomain,
+    setFakeDomain
+  }), [whoisInfo, tlsInfo, businessInfo, pageInfo, riskScore, loading, error, inPhishDB, fakeDomain]);
 
   return (
     <GlobalContext.Provider value={contextValue}>

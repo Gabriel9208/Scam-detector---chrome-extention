@@ -13,6 +13,7 @@ from Data.whoisInfo import searchWhois
 from Data.TLSCheck import fetchTlsCert
 from Data.findbiz import findbiz
 from Data.scraper import scraper
+from Data.fakeDomain import fakeDomainDetection
 
 from Analysis.IsWellKnownCA import isTrustedCA
 from Analysis.checkPhishDB import checkPhishDB
@@ -51,6 +52,9 @@ class CARequest(BaseModel):
 class URLRequest(BaseModel):
     url: str
     
+class FakeDomainRequest(BaseModel):
+    url: str
+    source: str
 
 @app.post("/scam-detector/detail/whois/")
 async def whois(url: Url):
@@ -78,7 +82,7 @@ async def findBizRegistration(request: FindBizRequest):
         logging.info(f"Received FindBiz request for URL: {request.url} and Organization: {request.organizationName}")
         result = await asyncio.wait_for(
             asyncio.to_thread(findbiz, request.url, request.organizationName),
-            timeout=15.0
+            timeout=7.0
         )
         if result == {}:
             logging.warning(f"No business registration found for {request.url}")
@@ -98,7 +102,7 @@ async def tls(url: Url):
         logging.info(f"Received TLS request for URL: {url.url}")
         result = await asyncio.wait_for(
             asyncio.to_thread(fetchTlsCert, url.url),
-            timeout=15.0
+            timeout=7.0
         )
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))  # Ensure JSON response
     except TimeoutError:
@@ -115,7 +119,7 @@ async def web_content(url: Url):
         logging.info(f"Received Web Content request for URL: {url.url}")
         result = await asyncio.wait_for(
             asyncio.to_thread(scraper, url.url),
-            timeout=15.0
+            timeout=7.0
         )
         if not result:
             result = {}
@@ -127,6 +131,21 @@ async def web_content(url: Url):
         logging.error(f"Error in Web Content endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/scam-detector/detail/fake-domain/")
+async def check_fake_domain(request: FakeDomainRequest):
+    try:
+        logging.info(f"Received Fake Domain request for URL: {request.url} and Source: {request.source}")
+        result = await asyncio.wait_for(
+            asyncio.to_thread(fakeDomainDetection, request.url, request.source),
+            timeout=7.0
+        )
+        return JSONResponse(content={"result": result}) 
+    except TimeoutError:
+        logging.warning(f"Fake Domain request timed out for URL: {request.url}")
+        return JSONResponse(content={"error": "Timeout"})
+    except Exception as e:
+        logging.error(f"Error in Fake Domain endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/scam-detector/analysis/ca/")
 async def check_ca(request: CARequest):
@@ -134,7 +153,7 @@ async def check_ca(request: CARequest):
         logging.info(f"Received CA: /{request.ca}/")
         result = await asyncio.wait_for(
             asyncio.to_thread(isTrustedCA, request.ca),
-            timeout=15.0
+            timeout=7.0
         )
         logging.info(f"CA No HTTPException: {result}")
         return JSONResponse(content={"result": result})  # Ensure JSON response
@@ -155,7 +174,7 @@ async def check_phish(request: URLRequest):
         logging.info(f"Received PhishDB request for URL: {request.url}")
         result = await asyncio.wait_for(
             asyncio.to_thread(checkPhishDB, request.url),
-            timeout=15.0
+            timeout=7.0
         )
         return JSONResponse(content={"result": result})  # Ensure JSON response
     except TimeoutError:
@@ -167,3 +186,5 @@ async def check_phish(request: URLRequest):
     except Exception as e:
         logging.info(f"PhishDB Exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+

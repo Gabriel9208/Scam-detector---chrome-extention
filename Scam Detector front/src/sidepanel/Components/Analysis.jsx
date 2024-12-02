@@ -9,16 +9,17 @@ export const scoreContributions = {
   inPhishDB: 10,
   isDomainExpiringSoon: 0.5,
   isTLSExpiringSoon: 0.5,
-  caStatus: 1,
+  caStatus: 2,
   isDomainNew: 0.5,
   businessInfo: 1,
   pageInfo: 0.5,
   tlsInfo: 1,
-  whoisInfo: 1
+  whoisInfo: 1,
+  fakeDomain: 1
 };
 
 export const Analysis = ({ url }) => {
-  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB, loading } = useContext(GlobalContext);
+  const { whoisInfo, tlsInfo, businessInfo, pageInfo, setRiskScore, inPhishDB, setInPhishDB, loading, fakeDomain } = useContext(GlobalContext);
   const [caStatus, setCaStatus] = useState(null);
   const [caError, setCaError] = useState(null);
 
@@ -169,7 +170,8 @@ export const Analysis = ({ url }) => {
       businessInfo: businessInfo && Object.keys(businessInfo).length > 0 && !("detail" in businessInfo) && !("details" in businessInfo) && !("error" in businessInfo) ? 0 : scoreContributions.businessInfo,
       pageInfo: pageInfo && Object.keys(pageInfo).length > 0 && !("detail" in pageInfo) && !("details" in pageInfo) && !("error" in pageInfo) ? 0 : scoreContributions.pageInfo,
       tlsInfo: tlsInfo && Object.keys(tlsInfo).length > 0 && !("detail" in tlsInfo) && !("details" in tlsInfo) && !("error" in tlsInfo) ? 0 : scoreContributions.tlsInfo,
-      whoisInfo: whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? 0 : scoreContributions.whoisInfo
+      whoisInfo: whoisInfo && Object.keys(whoisInfo).length > 0 && !("detail" in whoisInfo) && !("details" in whoisInfo) && !("error" in whoisInfo) ? 0 : scoreContributions.whoisInfo,
+      fakeDomain: fakeDomain ? scoreContributions.fakeDomain : 0  
     };
 
     const newRiskScore = Object.values(calculatedScoreContributions).reduce((a, b) => a + b, 0);
@@ -201,6 +203,7 @@ export const Analysis = ({ url }) => {
               if (caStatus === false) return <p>惡意: 證書授權機構未獲信任。</p>;
               return null;
             })()}
+          {fakeDomain && <p>警告: 此網站可能是假冒的。</p>}
         </div>
         <h3>時間分析 :</h3>
         <div className='indent-container'>
@@ -209,12 +212,12 @@ export const Analysis = ({ url }) => {
           {whoisInfo && !domainExpired &&
             <>
               <p>域齡: 已建立 {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
-              <p>域名到期日: 還剩{daysUntilExpiration}天過期 {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
+              <p>域名到期日: 還剩 {daysUntilExpiration} 天過期 {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }
           {tlsInfo && !tlsExpired &&
             <>
-              <p>TLS 證書到期日: 還剩{daysUntilTLSExpiration}天過期 {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
+              <p>TLS 證書到期日: 還剩 {daysUntilTLSExpiration} 天過期 {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }
         </div>

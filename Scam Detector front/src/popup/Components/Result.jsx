@@ -8,21 +8,21 @@ export const Result = ({threshold}) => {
   const { riskScore, loading, error } = useContext(GlobalContext);
 
   const color = useMemo(() => {
-    if (riskScore > 2) return '#FF0000';
+    if (riskScore >= 2) return '#FF0000';
     if (riskScore > threshold) return '#FFA500';
     return '#00FF00';
   }, [threshold, riskScore])
 
   const text = useMemo(() => {
-    if (riskScore > 2) return '惡意';
+    if (riskScore >= 2) return '惡意';
     if (riskScore > threshold) return '可疑';
     return '安全';
   }, [threshold, riskScore])
 
   const normalizedScore = useMemo(() => {
     let score;
-    if (riskScore > 2) {
-      score = 0; 
+    if (riskScore >= 2) {
+      score = 5; 
     } else if (riskScore > threshold) {
       const suspiciousRange = (2 - threshold);
       const position = (2 - riskScore) / suspiciousRange;

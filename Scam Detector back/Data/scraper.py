@@ -173,7 +173,8 @@ def scraper(url:str):
         )
         
         info = {}
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, 'html.parser')
         
         # threading.Thread(target=close_driver, args=(driver,)).start()
         
@@ -208,7 +209,7 @@ def scraper(url:str):
  
         if not footer:
             print("No footer found!")
-            return {}
+            return {'source': page_source, 'info': {}}
 
         with ThreadPoolExecutor(max_workers=18) as executor:
             futures = [executor.submit(process_footer_element, footer, index) for index in range (18)]
@@ -228,12 +229,12 @@ def scraper(url:str):
             if isinstance(info[category], list):
                 info[category] = list(dict.fromkeys(info[category]))
         
-        return info
+        return {'source': page_source, 'info': info}
     
     except Exception as e:
         print('Exception:', e)
         threading.Thread(target=close_driver, args=(driver,)).start()
-        return {}
+        return {'source': page_source, 'info': {}}
 
 # matchList = None    
 # try:

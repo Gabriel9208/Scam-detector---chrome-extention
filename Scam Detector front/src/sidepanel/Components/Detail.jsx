@@ -2,12 +2,12 @@ import { Whois } from './Details/Whois.jsx'
 import { PageInfo } from './Details/PageInfo.jsx'
 import { TLS } from './Details/TLS.jsx'
 import { Business } from './Details/Business.jsx'
-import React, { useEffect, useMemo, useContext, useState } from 'react'
+import React, { useEffect, useMemo, useContext } from 'react'
 import axios from 'axios';
 import { GlobalContext } from '../GlobalProvider.jsx';
 
 export const Detail = ({ url }) => {
-    const { setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, loading, setLoading, error, setError } = useContext(GlobalContext);
+    const { setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, loading, setLoading, error, setError, setFakeDomain } = useContext(GlobalContext);
 
     const fetchData = useMemo(() => async () => {
         if (!url) return;
@@ -36,6 +36,7 @@ export const Detail = ({ url }) => {
         }
 
         let orgName = "";
+        let pageSource = "";
         const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy", "Prohibited", "Fail"]
         const fetchEndpoint = async (endpoint, setter, ...args) => {
             const startTime = Date.now();
@@ -48,8 +49,14 @@ export const Detail = ({ url }) => {
                 if(endpoint === 'findbiz' && args.length > 0){
                     response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url, organizationName: args[0] });
                 }
+                else if(endpoint === 'fake-domain' && args.length > 0){
+                    response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url, source: args[0] });
+                }
                 else{
                     response = await axios.post(`http://localhost:8000/scam-detector/detail/${endpoint}/`, { url: url });
+                    if(endpoint === 'web-content'){
+                        pageSource = response.data.source;
+                    }
                 }
 
                 const duration = Date.now() - startTime;
@@ -62,7 +69,16 @@ export const Detail = ({ url }) => {
                     setter({});
                 }
                 else{
-                    setter(decodeData(response.data));
+                    if(endpoint === 'web-content'){
+                        setter(decodeData(response.data)['info']);
+                    }
+                    else if(endpoint === 'fake-domain'){
+                        console.log("fake-domain:", decodeData(response.data)['result']);
+                        setter(decodeData(response.data)['result']['result']);
+                    }
+                    else{
+                        setter(decodeData(response.data));
+                    }
                 }
 
                 if (endpoint === 'whois') {
@@ -108,9 +124,11 @@ export const Detail = ({ url }) => {
         ]);
 
         if (orgName.trim() !== "") {
+            await fetchEndpoint('fake-domain', setFakeDomain, pageSource);
             await fetchEndpoint('findbiz', setBusinessInfo, orgName);
         }
         else{
+            await fetchEndpoint('fake-domain', setFakeDomain, pageSource);
             await fetchEndpoint('findbiz', setBusinessInfo);
         }
 

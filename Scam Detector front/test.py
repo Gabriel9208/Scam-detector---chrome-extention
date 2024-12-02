@@ -243,7 +243,7 @@ def batch_analyze_urls(urls, max_workers=3):
             except Exception as e:
                 print(f"Error processing URL: {e}")
     
-    return results
+    return results 
 
 # Example usage
 if __name__ == "__main__":

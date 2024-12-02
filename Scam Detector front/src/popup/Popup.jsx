@@ -15,7 +15,7 @@ export const Popup = () => {
 
   // Access setThreshold and threshold from GlobalContext
   const { setWhoisInfo, setTlsInfo, setBusinessInfo, setPageInfo, 
-                      setRiskScore, setLoading, setError, setInPhishDB } = useContext(GlobalContext);
+                      setRiskScore, setLoading, setError, setInPhishDB, setFakeDomain } = useContext(GlobalContext);
 
   useEffect(() => {
     setWhoisInfo(null);
@@ -26,6 +26,7 @@ export const Popup = () => {
     setLoading(true);
     setError(null);
     setInPhishDB(false);
+    setFakeDomain(false);
   }, [url]);
 
   const handleSubmit = useCallback(() => {

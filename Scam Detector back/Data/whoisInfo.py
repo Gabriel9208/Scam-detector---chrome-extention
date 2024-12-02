@@ -3,7 +3,6 @@ import whois
 from urllib.parse import urlparse
 import logging
 import time
-import signal
 
 def urlToDomain(url: str) -> str:
     subDomain = urlparse(url).netloc
@@ -44,8 +43,6 @@ def getAuthoritativeWhoisServer(domain: str) -> tuple[str, str, str]:
         if registrarWhoisServer and domainName:
             break
     
-    logging.info(f"WHOIS data: {rawWhois}")
-
     return registrarWhoisServer, domainName, rawWhois
 
 def queryWhoisServer(registrarWhois: str, queryDomain: str) -> str:
