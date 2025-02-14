@@ -51,7 +51,7 @@ export const Detail = ({ url }) => {
 
         let orgName = "";
         let pageSource = "";
-        const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy", "Prohibited", "Fail"]
+        const orgNameHidden = ["encrypt", "protected", "disclosed", "Redacted", "privacy", "Prohibited", "Fail", "proxy", "domain"]
         const fetchEndpoint = async (endpoint, setter, ...args) => {
             const startTime = Date.now();
             try {
@@ -89,6 +89,14 @@ export const Detail = ({ url }) => {
                     else if(endpoint === 'fake-domain'){
                         console.log("fake-domain:", decodeData(response.data)['result']);
                         setter(decodeData(response.data)['result']['result']);
+                    }
+                    else if(endpoint === 'whois'){
+                        if(!("Domain Name" in response.data)){
+                            setter({});
+                        }
+                        else{
+                            setter(decodeData(response.data));
+                        }
                     }
                     else{
                         setter(decodeData(response.data));

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import logging
 
-from Data.whoisInfo import urlToDomain
+from urllib.parse import urlparse
 
 
 headers = {
@@ -235,7 +235,8 @@ def findbiz(url:str, companyName:str=None, num=None):
     Returns:
         dict: A dictionary containing business information, or an empty dict if not found
     '''
-    domain = urlToDomain(url)
+    domain = urlparse(url).netloc
+
     if num:
          # If a business number is provided, directly request business info
          return request_to_biz(num)[0]
@@ -269,4 +270,4 @@ def findbiz(url:str, companyName:str=None, num=None):
 
 
 if __name__ == "__main__":
-    print(findbiz("https://www.cna.com.tw/", "財團法人中央通訊社 THE CENTRAL NEWS AGENCY ic")) 
+    print(findbiz("https://www.esunbank.com/zh-tw/personalc")) 

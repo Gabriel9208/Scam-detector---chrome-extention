@@ -25,10 +25,6 @@ export const Analysis = ({ url }) => {
 
   // Memoize the date calculations
   const {
-    creationDate,
-    expirationDate,
-    tlsExpirationDate,
-    currentDateUTC8,
     domainAge,
     daysUntilExpiration,
     daysUntilTLSExpiration,
@@ -40,10 +36,13 @@ export const Analysis = ({ url }) => {
   } = useMemo(() => {
     // Check for multiple possible field names for creation date
     const creationDateString =
-      whoisInfo?.creationDate ||
+      whoisInfo?.["creationDate"] ||
       whoisInfo?.['Record created'] ||
       whoisInfo?.['Creation Date'] ||
-      whoisInfo?.['Created Date'];
+      whoisInfo?.['Created Date'] ||
+      whoisInfo?.['Registration Time'] ||
+      whoisInfo?.['Creation Time'] ||
+      whoisInfo?.['Creation Time'];
 
     // Check for multiple possible field names for expiration date
     const expirationDateString =
@@ -51,13 +50,93 @@ export const Analysis = ({ url }) => {
       whoisInfo?.['Registry Expiry Date'] ||
       whoisInfo?.['Expiration Date'] ||
       whoisInfo?.['Registrar Registration Expiration Date'] ||
-      whoisInfo?.['Record expires'];
+      whoisInfo?.['Record expires'] ||
+      whoisInfo?.['Expiration Time'];
 
     const tlsExpirationDateString = tlsInfo?.notAfter;
 
     if (!creationDateString || !expirationDateString || !tlsExpirationDateString) {
       console.log('Score calculation: Missing date information');
       return {};
+    }
+
+    function parseCustomDateToUTC8(dateString) {
+      if (!dateString || typeof dateString !== 'string') {
+        console.error('Invalid or missing date string:', dateString);
+        return null;
+      }
+    
+      let date;
+    
+      // Check if the date string matches the "2029-07-12 00:00:00 (UTC+8)" format
+      const isoFormatRegex = /^\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+\(UTC([+-]\d+)\)\s*$/;
+      const isoMatch = dateString.match(isoFormatRegex);
+    
+      if (isoMatch) {
+        const [, datePart, timePart, offsetHours] = isoMatch;
+        date = new Date(`${datePart}T${timePart}Z`); // Treat as UTC
+        const offsetMilliseconds = parseInt(offsetHours) * 60 * 60 * 1000;
+        date = new Date(date.getTime() + offsetMilliseconds);
+      } else {
+        // Check if the date string matches the "2025-04-21T04:00:00Z" format
+        const isoUtcRegex = /^\s*(\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}[Zz])\s*$/;
+        const isoUtcMatch = dateString.match(isoUtcRegex);
+    
+        if (isoUtcMatch) {
+          date = new Date(dateString);
+        } else {
+          // Check if the date string matches the "2025-04-04T07:55:39" format
+          const isoWithoutTimezoneRegex = /^\s*(\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2})\s*$/;
+          const isoWithoutTimezoneMatch = dateString.match(isoWithoutTimezoneRegex);
+    
+          if (isoWithoutTimezoneMatch) {
+            date = new Date(dateString);
+          } else {
+            // Check if the date string matches the "Mar 3 23:59:59 2025 GMT" format
+            const humanReadableRegex = /^\s*(\w{3})\s+(\d{1,2})\s+(\d{2}:\d{2}:\d{2})\s+(\d{4})\s+GMT\s*$/;
+            const humanReadableMatch = dateString.match(humanReadableRegex);
+    
+            if (humanReadableMatch) {
+              const [, month, day, time, year] = humanReadableMatch;
+              const dateString = `${month} ${day} ${year} ${time} GMT`;
+              date = new Date(dateString);
+            } else {
+              // Check if the date string matches the "2024-03-25 00:11:03" format
+              const simpleFormatRegex = /^\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s*$/;
+              const simpleMatch = dateString.match(simpleFormatRegex);
+    
+              if (simpleMatch) {
+                const [, datePart, timePart] = simpleMatch;
+                date = new Date(`${datePart}T${timePart}Z`); // Treat as UTC
+              } else {
+                console.error('Unrecognized date format:', dateString);
+                return null;
+              }
+            }
+          }
+        }
+      }
+    
+      // Convert to UTC+8
+      const utc8Offset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+      return new Date(date.getTime() + utc8Offset);
+    }
+    
+    // Function to calculate the difference between two dates in days
+    function calculateDaysDifference(date1, date2) {
+      try {
+        if (!date1 || !date2 || !(date1 instanceof Date) || !(date2 instanceof Date)) {
+          console.error('Invalid date inputs:', { date1, date2 });
+          return -1;
+        }
+    
+        // Calculate the actual difference without Math.abs()
+        const diffTime = date2.getTime() - date1.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      } catch (error) {
+        console.error('Error calculating days difference:', error);
+        return -1;
+      }
     }
 
     const creationDate = parseCustomDateToUTC8(creationDateString);
@@ -71,38 +150,45 @@ export const Analysis = ({ url }) => {
 
     const currentDateUTC8 = new Date(Date.now() + 8 * 60 * 60 * 1000);
 
-    const domainAge = calculateDaysDifference(creationDate, currentDateUTC8);
-    const daysUntilExpiration = calculateDaysDifference(currentDateUTC8, expirationDate);
-    const daysUntilTLSExpiration = calculateDaysDifference(currentDateUTC8, tlsExpirationDate);
+    const domainAgeDay = calculateDaysDifference(creationDate, currentDateUTC8);
+    const daysUntilExpirationDay = calculateDaysDifference(currentDateUTC8, expirationDate);
+    const daysUntilTLSExpirationDay = calculateDaysDifference(currentDateUTC8, tlsExpirationDate);
 
-    const domainExpired = domainAge === -1;
-    const tlsExpired = daysUntilTLSExpiration === -1;
+    let domainExpiredDay = false;
+    let tlsExpiredDay = false;
+    let isDomainNewDay = false;
+    let isDomainExpiringSoonDay = false;
+    let isTLSExpiringSoonDay = false;
 
-    const isDomainNew = domainAge !== -1 && domainAge <= 365;
-    const isDomainExpiringSoon = daysUntilExpiration <= 30;
-    const isTLSExpiringSoon = daysUntilTLSExpiration <= 30;
+    if (daysUntilExpirationDay < 0){
+      domainExpiredDay = true;
+    }
 
-    console.log('Score calculation: Domain age:', domainAge);
-    console.log('Score calculation: Days until domain expiration:', daysUntilExpiration);
-    console.log('Score calculation: Days until TLS expiration:', daysUntilTLSExpiration);
-    console.log('Score calculation: Domain expired:', domainExpired);
-    console.log('Score calculation: TLS expired:', tlsExpired);
-    console.log('Score calculation: Is domain new:', isDomainNew);
-    console.log('Score calculation: Is domain expiring soon:', isDomainExpiringSoon);
-    console.log('Score calculation: Is TLS expiring soon:', isTLSExpiringSoon);
+    if(daysUntilTLSExpirationDay < 0){
+      tlsExpiredDay = true ;
+    }
+
+    if (domainAgeDay > 0 && domainAgeDay <= 365) {
+      isDomainNewDay = true;
+    }
+    
+    if(daysUntilExpirationDay > 0 && daysUntilExpirationDay <= 30){
+      isDomainExpiringSoonDay = true;
+    }
+
+    if(daysUntilTLSExpirationDay > 0 && daysUntilTLSExpirationDay <= 30){
+      isTLSExpiringSoonDay = true;
+    }
+
     return {
-      creationDate,
-      expirationDate,
-      tlsExpirationDate,
-      currentDateUTC8,
-      domainAge,
-      daysUntilExpiration,
-      daysUntilTLSExpiration,
-      domainExpired,
-      tlsExpired,
-      isDomainNew,
-      isDomainExpiringSoon,
-      isTLSExpiringSoon
+      domainAge: domainAgeDay,
+      daysUntilExpiration: daysUntilExpirationDay,
+      daysUntilTLSExpiration: daysUntilTLSExpirationDay,
+      domainExpired: domainExpiredDay,
+      tlsExpired: tlsExpiredDay,
+      isDomainNew: isDomainNewDay,
+      isDomainExpiringSoon: isDomainExpiringSoonDay,
+      isTLSExpiringSoon: isTLSExpiringSoonDay
     };
   }, [whoisInfo, tlsInfo]);
 
@@ -209,13 +295,13 @@ export const Analysis = ({ url }) => {
         <div className='indent-container'>
           {domainExpired && <p>惡意: 域名已過期。</p>}
           {tlsExpired && <p>惡意: TLS 證書已過期。</p>}
-          {whoisInfo && !domainExpired &&
+          {whoisInfo && whoisInfo!={} && !("error" in whoisInfo) && !domainExpired &&
             <>
               <p>域齡: 已建立 {domainAge} 天 {isDomainNew ? '(新域名)' : '(已建立域名)'}</p>
               <p>域名到期日: 還剩 {daysUntilExpiration} 天過期 {isDomainExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
           }
-          {tlsInfo && !tlsExpired &&
+          {tlsInfo && tlsInfo!={} && !("error" in tlsInfo) && !tlsExpired &&
             <>
               <p>TLS 證書到期日: 還剩 {daysUntilTLSExpiration} 天過期 {isTLSExpiringSoon ? '(即將到期!)' : ''}</p>
             </>
@@ -242,64 +328,3 @@ export const Analysis = ({ url }) => {
 };
 
 
-function parseCustomDateToUTC8(dateString) {
-  if (!dateString || typeof dateString !== 'string') {
-    console.error('Invalid or missing date string:', dateString);
-    return null;
-  }
-
-  let date;
-
-  // Check if the date string matches the "2029-07-12 00:00:00 (UTC+8)" format
-  const isoFormatRegex = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+\(UTC([+-]\d+)\)$/;
-  const isoMatch = dateString.match(isoFormatRegex);
-
-  if (isoMatch) {
-    const [, datePart, timePart, offsetHours] = isoMatch;
-    date = new Date(`${datePart}T${timePart}Z`); // Treat as UTC
-    const offsetMilliseconds = parseInt(offsetHours) * 60 * 60 * 1000;
-    date = new Date(date.getTime() + offsetMilliseconds);
-  } else {
-    // Check if the date string matches the "2025-04-21T04:00:00Z" format
-    const isoUtcRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)$/;
-    const isoUtcMatch = dateString.match(isoUtcRegex);
-
-    if (isoUtcMatch) {
-      date = new Date(dateString);
-    } else {
-      // Check if the date string matches the "2025-04-04T07:55:39" format
-      const isoWithoutTimezoneRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})$/;
-      const isoWithoutTimezoneMatch = dateString.match(isoWithoutTimezoneRegex);
-
-      if (isoWithoutTimezoneMatch) {
-        date = new Date(dateString);
-      } else {
-        // Check if the date string matches the "Mar 3 23:59:59 2025 GMT" format
-        const humanReadableRegex = /^(\w{3})\s+(\d{1,2})\s+(\d{2}:\d{2}:\d{2})\s+(\d{4})\s+GMT$/;
-        const humanReadableMatch = dateString.match(humanReadableRegex);
-
-        if (humanReadableMatch) {
-          const [, month, day, time, year] = humanReadableMatch;
-          const dateString = `${month} ${day} ${year} ${time} GMT`;
-          date = new Date(dateString);
-        } else {
-          console.error('Unrecognized date format:', dateString);
-          return null;
-        }
-      }
-    }
-  }
-
-  // Convert to UTC+8
-  const utc8Offset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
-  return new Date(date.getTime() + utc8Offset);
-}
-
-// Function to calculate the difference between two dates in days
-function calculateDaysDifference(date1, date2) {
-  if (date1 > date2) {
-    return -1;
-  }
-  const diffTime = Math.abs(date2 - date1);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}

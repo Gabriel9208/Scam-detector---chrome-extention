@@ -62,7 +62,7 @@ async def whois(url: Url):
         logging.info(f"Received WHOIS request for URL: {url.url}")
         result = await asyncio.wait_for(
             asyncio.to_thread(searchWhois, url.url),
-            timeout=15.0
+            timeout=7.0
         )
         return JSONResponse(content=json.loads(json.dumps(result, default=str)))
     except TimeoutError:

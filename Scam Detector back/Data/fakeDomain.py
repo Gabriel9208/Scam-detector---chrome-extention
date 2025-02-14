@@ -3,9 +3,6 @@ from Levenshtein import distance
 import re
 import numpy as np
 # from selenium import webdriver
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.common.by import By
 
 # chromeOpt = webdriver.ChromeOptions()
 # chromeOpt.add_argument("--headless=new")  
@@ -38,11 +35,12 @@ def check_fake_domain(user_url, document):
         
         threshold = len(user_domain) * 0.2 if len(user_domain) >= 5 else 1
         
-        for word in important_words:
+        for idx, word in enumerate(important_words):
             d = distance(user_domain, word)
             if d > 0 and d <= threshold:
                 redFlag = True
             if d == 0:
+                print(idx)
                 return False
             
         return redFlag
@@ -168,16 +166,8 @@ def extract_important_words(documents, max_features=100, domain=None):
     # Average TF-IDF score
     avg_scores = np.mean(tfidf_matrix.toarray(), axis=0)
     
-    important_indices = avg_scores.argsort()[-20:][::-1]
+    important_indices = avg_scores.argsort()[-15:][::-1]
     return [feature_names[i] for i in important_indices]
-
-def calculate_similarity_score(domain_distance, important_words):
-    """Calculates overall similarity score"""
-    # Normalize domain distance (0 means identical, 1 means very different)
-    domain_similarity = 1 - (domain_distance / max(len(important_words), 1))
-    
-    # Combine metrics (you can adjust weights as needed)
-    return domain_similarity
 
 def fakeDomainDetection(url, page_source):
     # driver.get(url)
@@ -185,15 +175,19 @@ def fakeDomainDetection(url, page_source):
     ps = re.sub(r'<style[\s\S]*?</style>', '', ps)
     ps = re.sub(r'{[\s\S]*}', '', ps)
     ps = re.sub(r'class="[\s\S]*?"', '', ps)
-    ps = re.sub(r'([a-z0-9])([\u4e00-\u9fff])', r'\1 \2', ps)  # Add space between Latin/numbers and Chinese
+    ps = re.sub(r'style="[\s\S]*?"', '', ps)
+    ps = re.sub(r'(https|http|www|)', '', ps)
+    ps = re.sub(r'([a-z0-9])([\u4e00-\u9fff])', r'\1 \2', ps)  
     ps = re.sub(r'([\u4e00-\u9fff])([a-z0-9])', r'\1 \2', ps)  # Add space between Chinese and Latin/numbers
     ps = re.sub(r'\s+', ' ', ps)
     ps = ps.strip()
             
-    
+
     l = len(ps)
-    document = [ps[i:i+l//5] for i in range(0, l, l//5)]
-        
+    if l == 0:
+        return {"result": False, "message": "The domain is legitimate"}
+    
+    document = [ps[i:i+l//4] for i in range(0, l, l//4)]
     if(check_fake_domain(url.lower(), document)):
         return {"result": True, "message": "The domain is suspicious"}
     else:
@@ -314,6 +308,6 @@ if __name__ == "__main__":
     #         except Exception as e:
     #             f.write(u + " " + "exception" + "\n" )
     
-    print(fakeDomainDetection("https://www.google.com.tw/"))
+    print(fakeDomainDetection("https://tw.yahoo.com/"))
         
     # driver.quit()
